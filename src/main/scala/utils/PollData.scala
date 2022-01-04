@@ -1,15 +1,18 @@
 package utils
 
 import scala.collection.mutable.Map
+import com.bot4s.telegram.models.Poll
 
-class PollData(name: String) {
+class PollData(name: String, pollObject: Poll) {
 
   private val pollName: String = name
   private var options: Map[String, Int] =
     Map[String, Int]()
+  private var poll: Poll = pollObject
 
-  def getPoll(): Map[String, Int] = options
+  def getPollOptions(): Map[String, Int] = options
   def getPollName(): String = name
+  def getPoll(): Poll = poll
 
   def vote(name: String): Option[String] = {
     if (!options.keys.exists(_ == name)) {

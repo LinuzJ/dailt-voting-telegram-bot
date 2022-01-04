@@ -1,0 +1,9 @@
+/.bsp/
+target/
+/.vscode/
+.vscode
+.bloop
+.metals
+
+.env
+.env.local

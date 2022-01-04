@@ -21,6 +21,7 @@ import com.bot4s.telegram.models.{
   InputFile,
   _
 }
+import simulacrum.op
 
 class TestBot(token: String)
     extends CoreBot(token)
@@ -103,11 +104,11 @@ class TestBot(token: String)
       withArgs { args =>
         {
           val name: Option[String] = args.headOption
+          val rest: Array[String] = args.toArray.tail
+
           if (name.isDefined) {
-            val f =
-              SendPoll(ChatId(msg.chat.id), "Pick A or B", Array("A", "B"))
-            val temp = sendPoll(f)
             polls(name.get) = new PollData(name.get, mostRecentPoll)
+            rest.foreach(option => polls(name.get).addOption(option))
           }
           request(
             SendMessage(
@@ -118,7 +119,6 @@ class TestBot(token: String)
           ).map(_ => ())
         }
       }
-
     }
   }
 
@@ -136,7 +136,7 @@ class TestBot(token: String)
     }
   }
 
-  onCommand("viewPollsReal") { implicit msg =>
+  onCommand("data") { implicit msg =>
     {
       request(
         SendMessage(
@@ -152,8 +152,11 @@ class TestBot(token: String)
     }
   }
 
-  onCommand("poll") { implicit msg =>
-    val f = SendPoll(ChatId(msg.chat.id), "Pick A or B", Array("A", "B"))
+  onCommand("makePoll") { implicit msg =>
+    val _name = polls.keys.head
+    val _poll = polls(_name)
+    val f =
+      SendPoll(ChatId(msg.chat.id), _name, _poll.getPollOptions().keys.toArray)
     sendPoll(f)
   }
 

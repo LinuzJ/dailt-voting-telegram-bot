@@ -1,6 +1,7 @@
 package bots
 
 import bots.CoreBot
+import Poll
 
 import scala.concurrent.Future
 
@@ -17,6 +18,7 @@ import com.bot4s.telegram.models.{
   InputFile,
   _
 }
+import scala.collection.mutable.Map
 
 class TestBot(token: String)
     extends CoreBot(token)
@@ -29,11 +31,7 @@ class TestBot(token: String)
   type Message = com.bot4s.telegram.models.Message
 
   private var chatId: ChatId = _
-  private var message: Message = _
-  private var data: String = _
-  private var messageId: Int = _
-
-  def getChatId(msg: Message): Long = msg.chat.id
+  private var polls: Map[String, Poll] = Map[String, Poll]()
 
   def killSwitch() = {
     Console.err.println("Shutting down")
@@ -41,14 +39,6 @@ class TestBot(token: String)
     "Quitting"
   }
 
-  /** Reacts and responds to commands without arguments
-    *
-    * @param command
-    *   The name of the command, e.g. "hello" for the command "/hello"
-    * @param action
-    *   A method that returns a string to send as a reply
-    * @return
-    */
   onCommand("hello") { implicit msg =>
     request(
       SendMessage(

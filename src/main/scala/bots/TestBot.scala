@@ -36,18 +36,18 @@ class TestBot(token: String)
 
   // important vars
   private var chatId: ChatId = _
-  private var polls: Map[String, PollData] = Map[String, PollData]()
   private var mostRecentPollMessageId: Int = _
   private var mostRecentPoll: Poll = _
 
   // data
-  private var results: Map[Poll, Array[(String, Int)]] = _
+  private var polls: Map[String, PollData] = Map[String, PollData]()
+  private var results: Map[Poll, Array[(String, Int)]] =
+    Map[Poll, Array[(String, Int)]]()
 
   def addToResult(_poll: Poll, _options: Array[PollOption]): Unit = {
-    println(_poll, _options)
-    println(results, "before\n")
-    results(_poll) = _options.map(option => (option.text, option.voterCount))
-    println(results, "after\n")
+    results(_poll) = _options.map(option => {
+      (option.text, option.voterCount)
+    })
   }
 
   def sendPoll(_poll: SendPoll) = {
@@ -77,11 +77,8 @@ class TestBot(token: String)
       case Failure(e) => println("Error " + e)
     }
     resultEither match {
-      case a: Poll => {
-        println(a)
-        addToResult(a, a.options)
-      }
-      case _ => println("Something funny has happened")
+      case a: Poll => addToResult(a, a.options)
+      case _       => println("Something funny has happened")
     }
 
     return f.map(_ => ())
@@ -146,7 +143,7 @@ class TestBot(token: String)
           ChatId.fromChat(msg.chat.id),
           (for ((poll, options) <- results) yield {
             var re: String = poll.id
-            options.foreach(x => re = re + x._1)
+            options.foreach(x => re = re + " " + x._1 + ": " + x._2)
             re
           }).mkString("\n"),
           parseMode = Some(ParseMode.HTML)

@@ -1,7 +1,7 @@
 package bots
 
 import bots.CoreBot
-import Poll
+import utils.PollData
 
 import scala.concurrent.Future
 
@@ -31,7 +31,7 @@ class TestBot(token: String)
   type Message = com.bot4s.telegram.models.Message
 
   private var chatId: ChatId = _
-  private var polls: Map[String, Poll] = Map[String, Poll]()
+  private var polls: Map[String, PollData] = Map[String, PollData]()
 
   def killSwitch() = {
     Console.err.println("Shutting down")
@@ -47,6 +47,41 @@ class TestBot(token: String)
         parseMode = Some(ParseMode.HTML)
       )
     ).map(_ => ())
+  }
+
+  onCommand("addPoll") { implicit msg =>
+    {
+      withArgs { args =>
+        {
+          val name: Option[String] = args.headOption
+          if (name.isDefined) {
+            polls(name.get) = new PollData(name.get)
+          }
+          request(
+            SendMessage(
+              ChatId.fromChat(msg.chat.id),
+              if (name.isDefined) "Success" else "Failiure..",
+              parseMode = Some(ParseMode.HTML)
+            )
+          ).map(_ => ())
+        }
+      }
+
+    }
+  }
+
+  onCommand("viewPolls") { implicit msg =>
+    {
+      request(
+        SendMessage(
+          ChatId.fromChat(msg.chat.id),
+          (for (poll <- polls.values) yield {
+            poll.representation()
+          }).mkString("\n"),
+          parseMode = Some(ParseMode.HTML)
+        )
+      ).map(_ => ())
+    }
   }
 
   onCommand("kill") { implicit msg =>

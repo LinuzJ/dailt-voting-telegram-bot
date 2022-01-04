@@ -1,12 +1,15 @@
+package utils
+
 import scala.collection.mutable.Map
 
-class Poll(name: String) {
+class PollData(name: String) {
 
   private val pollName: String = name
   private var options: Map[String, Int] =
     Map[String, Int]()
 
   def getPoll(): Map[String, Int] = options
+  def getPollName(): String = name
 
   def vote(name: String): Option[String] = {
     if (!options.keys.exists(_ == name)) {
@@ -38,6 +41,14 @@ class Poll(name: String) {
     options.-(name)
 
     return None
+  }
+
+  def representation(): String = {
+    var res: String = pollName + ":\n"
+    options.foreach(option => {
+      res = res + s"  ${option._1} -> ${option._2}\n"
+    })
+    res
   }
 
 }

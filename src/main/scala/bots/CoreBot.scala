@@ -22,8 +22,11 @@ abstract class CoreBot(val token: String)
     with Commands[Future]
     with Callbacks[Future]
     with ChatActions[Future] {
-  var mostRecentChatId: Option[ChatId] = None
+
   override val client: RequestHandler[Future] = new ScalajHttpClient(token)
+
+  // Tracking chatIds
+  var mostRecentChatId: Option[ChatId] = None
 
   onCommand("initChat") { implicit msg =>
     // Recognize chatId

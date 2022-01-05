@@ -68,6 +68,10 @@ class Timer extends Runnable {
               )
               Thread.sleep((answerPeriodTimeInSeconds / 4) * 1000)
               bot.get.sendMessage(s"Time is up!")
+              // Stop the current poll
+              bot.get.stopPoll()
+
+              // Init new poll
               bot.get.newPoll(this.getCurrentDate())
             }
           } else {

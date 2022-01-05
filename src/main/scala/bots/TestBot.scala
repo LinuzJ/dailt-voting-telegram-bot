@@ -107,6 +107,17 @@ class TestBot(token: String, timerIn: Timer) extends CoreBot(token) {
 
   }
 
+  def stopPoll(): Unit = {
+    mostRecentChatId match {
+      case id: Option[ChatId] => {
+        val s: StopPoll =
+          StopPoll(id.get, Some(mostRecentPollMessageId))
+        stopPollAndUpdateData(s)
+      }
+      case _ =>
+    }
+  }
+
   onCommand("info") { implicit msg =>
     mostRecentChatId = Some(ChatId.fromChat(msg.chat.id))
 

@@ -1,13 +1,19 @@
 import bots.TestBot
 import bots.CoreBot
-
+import time.Timer
 object Main extends App {
 
   private val key: Option[String] = sys.env.get("TELEGRAM_TOKEN")
   private var bot: CoreBot = _
 
   if (key.isDefined) {
-    bot = new TestBot(key.get)
+    val timer: Timer = new Timer
+
+    bot = new TestBot(key.get, timer)
+
+    // INIT TIMER THREAD
+    timer.setBot(bot)
+    new Thread(timer).start
   } else {
     Console.err.println("Please provide token in .env variable")
     System.exit(0)

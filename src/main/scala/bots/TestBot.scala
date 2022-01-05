@@ -24,7 +24,7 @@ import com.bot4s.telegram.models.{
 }
 import simulacrum.op
 
-class TestBot(token: String)
+class TestBot(token: String, timer: Timer)
     extends CoreBot(token)
     with Polling
     with Commands[Future]
@@ -45,10 +45,6 @@ class TestBot(token: String)
   private var polls: Map[String, PollData] = Map[String, PollData]()
   private var results: Map[Poll, Array[(String, Int)]] =
     Map[Poll, Array[(String, Int)]]()
-
-  // INIT TIMER THREAD
-  val timer: Timer = new Timer
-  new Thread(timer).start
 
   def addToResult(_poll: Poll, _options: Array[PollOption]): Unit = {
     results(_poll) = _options.map(option => {
@@ -98,7 +94,8 @@ class TestBot(token: String)
     request(
       SendMessage(
         ChatId.fromChat(msg.chat.id),
-        "Hello young sir!" + s" ${timer.elapsedTime()}",
+        s" ${timer.elapsedTime()}s has elapsed since you turned on the bot and now is minute ${timer
+          .getCurrentMinute()} and day ${timer.getCurrentDate()}",
         parseMode = Some(ParseMode.HTML)
       )
     ).map(_ => ())

@@ -19,7 +19,7 @@ import com.bot4s.telegram.models.{
 }
 import simulacrum.op
 
-class TestBot(token: String, timerIn: Timer) extends CoreBot(token) {
+class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
 
   // Easier types
   type Button = InlineKeyboardButton
@@ -246,4 +246,5 @@ class TestBot(token: String, timerIn: Timer) extends CoreBot(token) {
     ).map(_ => ())
   }
 
+  def test(): String = "test"
 }

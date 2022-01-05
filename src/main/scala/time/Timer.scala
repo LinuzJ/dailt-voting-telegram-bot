@@ -2,17 +2,17 @@ package time
 
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit
-import bots.TestBot
+import bots.VotingBot
 
 class Timer extends Runnable {
 
-  private var bot: Option[TestBot] = None
+  private var bot: Option[VotingBot] = None
   private var startTime: Calendar = Calendar.getInstance()
   private var currTime: Calendar = Calendar.getInstance()
   private val periodTimeInMinutes: Int = 1
   private val answerPeriodTimeInSeconds: Int = 10
   // Init bot
-  def setBot(newBot: TestBot): Unit = bot = Some(newBot)
+  def setBot(newBot: VotingBot): Unit = bot = Some(newBot)
 
   def getCurrTime(): Calendar = currTime
 
@@ -27,8 +27,8 @@ class Timer extends Runnable {
   def run() {
     // Init first poll
     bot match {
-      case a: Option[TestBot] => bot.get.newPoll(this.getCurrentDate())
-      case _                  =>
+      case a: Option[VotingBot] => bot.get.newPoll(this.getCurrentDate())
+      case _                    =>
     }
 
     var periodDone: (Boolean, Long) = (false, 0)
@@ -51,8 +51,8 @@ class Timer extends Runnable {
 
             // Send poll and wait for results
             val success: Boolean = bot match {
-              case b: Option[TestBot] => b.get.makePoll; true
-              case _                  => false
+              case b: Option[VotingBot] => b.get.makePoll; true
+              case _                    => false
             }
             if (success) {
               bot.get.sendMessage(

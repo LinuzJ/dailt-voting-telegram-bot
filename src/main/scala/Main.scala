@@ -1,15 +1,15 @@
-import bots.TestBot
+import bots.VotingBot
 import bots.CoreBot
 import time.Timer
 object Main extends App {
 
   private val key: Option[String] = sys.env.get("TELEGRAM_TOKEN")
-  private var bot: TestBot = _
+  private var bot: VotingBot = _
 
   if (key.isDefined) {
     val timer: Timer = new Timer
 
-    bot = new TestBot(key.get, timer)
+    bot = new VotingBot(key.get, timer)
 
     // INIT TIMER THREAD
     timer.setBot(bot)

@@ -2,6 +2,7 @@ package bots
 
 import bots.CoreBot
 import utils.PollData
+import time.Timer
 
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
@@ -44,6 +45,10 @@ class TestBot(token: String)
   private var polls: Map[String, PollData] = Map[String, PollData]()
   private var results: Map[Poll, Array[(String, Int)]] =
     Map[Poll, Array[(String, Int)]]()
+
+  // INIT TIMER THREAD
+  val timer: Timer = new Timer
+  new Thread(timer).start
 
   def addToResult(_poll: Poll, _options: Array[PollOption]): Unit = {
     results(_poll) = _options.map(option => {
@@ -93,7 +98,7 @@ class TestBot(token: String)
     request(
       SendMessage(
         ChatId.fromChat(msg.chat.id),
-        "Hello young sir!",
+        "Hello young sir!" + s" ${timer.elapsedTime()}",
         parseMode = Some(ParseMode.HTML)
       )
     ).map(_ => ())

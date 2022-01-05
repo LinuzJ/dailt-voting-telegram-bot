@@ -3,18 +3,13 @@ package bots
 import bots.CoreBot
 import utils.PollData
 import time.Timer
-
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import scala.collection.mutable.Map
 import scala.util.{Failure, Success, Try}
 import scala.language.postfixOps
-
-import com.bot4s.telegram.future.{Polling, TelegramBot}
-import com.bot4s.telegram.api.declarative.{Commands, Callbacks}
+import java.util.concurrent.TimeUnit
 import com.bot4s.telegram.api.RequestHandler
-
-import com.bot4s.telegram.api.ChatActions
 import com.bot4s.telegram.methods.{SendMessage, _}
 import com.bot4s.telegram.models.{
   InlineKeyboardButton,
@@ -24,12 +19,7 @@ import com.bot4s.telegram.models.{
 }
 import simulacrum.op
 
-class TestBot(token: String, timerIn: Timer)
-    extends CoreBot(token)
-    with Polling
-    with Commands[Future]
-    with Callbacks[Future]
-    with ChatActions[Future] {
+class TestBot(token: String, timerIn: Timer) extends CoreBot(token) {
 
   // Easier types
   type Button = InlineKeyboardButton
@@ -40,7 +30,6 @@ class TestBot(token: String, timerIn: Timer)
   private var chatId: ChatId = _
   private var mostRecentPollMessageId: Int = _
   private var mostRecentPoll: Poll = _
-  private var mostRecentChatId: Option[ChatId] = None
   private val timer: Timer = timerIn
 
   // data
@@ -117,18 +106,14 @@ class TestBot(token: String, timerIn: Timer)
     }
 
   }
-  onCommand("hello") { implicit msg =>
-    println("Most recent poll: " + mostRecentPoll)
-    println("Most recent poll message id: " + mostRecentPollMessageId)
-    println("results: " + results)
-    println("polls: " + polls)
 
+  onCommand("info") { implicit msg =>
     mostRecentChatId = Some(ChatId.fromChat(msg.chat.id))
 
     request(
       SendMessage(
         ChatId.fromChat(msg.chat.id),
-        s" ${timer.elapsedTime()}s has elapsed since you turned on the bot and now is minute ${timer
+        s" ${TimeUnit.MILLISECONDS.toSeconds(timer.elapsedTime())}s has elapsed since you turned on the bot and now is minute ${timer
           .getCurrentMinute()} and day ${timer.getCurrentDate()}",
         parseMode = Some(ParseMode.HTML)
       )
@@ -229,7 +214,6 @@ class TestBot(token: String, timerIn: Timer)
         )
       ).map(_ => ())
     }
-
   }
 
   onCommand("stop") { implicit msg =>

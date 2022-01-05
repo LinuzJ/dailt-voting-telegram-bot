@@ -15,12 +15,12 @@ object Main extends App {
     timer.setBot(bot)
     new Thread(timer).start
   } else {
-    Console.err.println("Please provide token in .env variable")
+    Console.err.println("Please provide token in env variable")
     System.exit(0)
   }
 
   val eol = bot.run()
-  println("Press [ENTER] to shutdown the bot, it may take a few seconds...")
+  println("Press ENTER to shutdown the bot")
   scala.io.StdIn.readLine()
   bot.shutdown()
 

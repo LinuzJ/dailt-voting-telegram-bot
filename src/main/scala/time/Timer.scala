@@ -10,6 +10,7 @@ class Timer extends Runnable {
   private var startTime: Calendar = Calendar.getInstance()
   private var currTime: Calendar = Calendar.getInstance()
   private val periodTimeInMinutes: Int = 1
+  private val answerPeriodTimeInSeconds: Int = 10
   // Init bot
   def setBot(newBot: TestBot): Unit = bot = Some(newBot)
 
@@ -45,11 +46,29 @@ class Timer extends Runnable {
             .toMillis(periodTimeInMinutes)) == 0
         ) {
           if (!periodDone._1 && (currElapsedTime != periodDone._2)) {
+            // Update period
             periodDone = (true, currElapsedTime)
-            println("mkpoll")
-            bot match {
-              case b: Option[TestBot] => b.get.makePoll
-              case _                  =>
+
+            // Send poll and wait for results
+            val success: Boolean = bot match {
+              case b: Option[TestBot] => b.get.makePoll; true
+              case _                  => false
+            }
+            if (success) {
+              bot.get.sendMessage(
+                s"The poll is open!\n You have ${answerPeriodTimeInSeconds}s time to answer!"
+              )
+              Thread.sleep((answerPeriodTimeInSeconds / 2) * 1000)
+              bot.get.sendMessage(
+                s"Half of the answering time is gone!\n You have ${answerPeriodTimeInSeconds / 2}s left to answer!"
+              )
+              Thread.sleep((answerPeriodTimeInSeconds / 4) * 1000)
+              bot.get.sendMessage(
+                s"Only 1/4 of the answering time left!\n You have ${answerPeriodTimeInSeconds / 4}s left to answer!"
+              )
+              Thread.sleep((answerPeriodTimeInSeconds / 4) * 1000)
+              bot.get.sendMessage(s"Time is up!")
+              bot.get.newPoll(this.getCurrentDate())
             }
           } else {
             periodDone = (false, periodDone._2)

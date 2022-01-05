@@ -4,7 +4,7 @@ import time.Timer
 object Main extends App {
 
   private val key: Option[String] = sys.env.get("TELEGRAM_TOKEN")
-  private var bot: CoreBot = _
+  private var bot: TestBot = _
 
   if (key.isDefined) {
     val timer: Timer = new Timer

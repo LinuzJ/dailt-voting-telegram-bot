@@ -24,7 +24,7 @@ import com.bot4s.telegram.models.{
 }
 import simulacrum.op
 
-class TestBot(token: String, timer: Timer)
+class TestBot(token: String, timerIn: Timer)
     extends CoreBot(token)
     with Polling
     with Commands[Future]
@@ -40,6 +40,8 @@ class TestBot(token: String, timer: Timer)
   private var chatId: ChatId = _
   private var mostRecentPollMessageId: Int = _
   private var mostRecentPoll: Poll = _
+  private var mostRecentChatId: Option[ChatId] = None
+  private val timer: Timer = timerIn
 
   // data
   private var polls: Map[String, PollData] = Map[String, PollData]()
@@ -86,11 +88,43 @@ class TestBot(token: String, timer: Timer)
     return f.map(_ => ())
   }
 
+  def newPoll(date: String): Unit = polls(date) = new PollData(date)
+
+  def makePoll(): Unit = {
+    mostRecentChatId match {
+      case id: Option[ChatId] => {
+        val _name = timer.getCurrentDate()
+        if (polls.exists(_._1 == _name)) {
+          val _poll = polls(_name)
+          val f =
+            SendPoll(
+              id.get,
+              _name,
+              _poll.getPollOptions().keys.toArray
+            )
+          sendPoll(f)
+        } else {
+          request(
+            SendMessage(
+              id.get,
+              "No poll for this date exists...",
+              parseMode = Some(ParseMode.HTML)
+            )
+          ).map(_ => ())
+        }
+      }
+      case _ => println("No chatId...")
+    }
+
+  }
   onCommand("hello") { implicit msg =>
     println("Most recent poll: " + mostRecentPoll)
     println("Most recent poll message id: " + mostRecentPollMessageId)
     println("results: " + results)
     println("polls: " + polls)
+
+    mostRecentChatId = Some(ChatId.fromChat(msg.chat.id))
+
     request(
       SendMessage(
         ChatId.fromChat(msg.chat.id),
@@ -101,6 +135,27 @@ class TestBot(token: String, timer: Timer)
     ).map(_ => ())
   }
 
+  onCommand("addOption") { implicit msg =>
+    {
+      withArgs { args =>
+        {
+          val option: Option[String] = args.headOption
+
+          if (option.isDefined) {
+            polls(timer.getCurrentDate()).addOption(option.get)
+          }
+          request(
+            SendMessage(
+              ChatId.fromChat(msg.chat.id),
+              if (option.isDefined) "Success" else "Failiure..",
+              parseMode = Some(ParseMode.HTML)
+            )
+          ).map(_ => ())
+        }
+      }
+    }
+  }
+
   onCommand("addPoll") { implicit msg =>
     {
       withArgs { args =>
@@ -109,7 +164,7 @@ class TestBot(token: String, timer: Timer)
           val rest: Array[String] = args.toArray.tail
 
           if (name.isDefined) {
-            polls(name.get) = new PollData(name.get, mostRecentPoll)
+            polls(name.get) = new PollData(name.get)
             rest.foreach(option => polls(name.get).addOption(option))
           }
           request(
@@ -155,11 +210,26 @@ class TestBot(token: String, timer: Timer)
   }
 
   onCommand("makePoll") { implicit msg =>
-    val _name = polls.keys.head
-    val _poll = polls(_name)
-    val f =
-      SendPoll(ChatId(msg.chat.id), _name, _poll.getPollOptions().keys.toArray)
-    sendPoll(f)
+    val _name = timer.getCurrentDate()
+    if (polls.exists(_._1 == _name)) {
+      val _poll = polls(_name)
+      val f =
+        SendPoll(
+          ChatId(msg.chat.id),
+          _name,
+          _poll.getPollOptions().keys.toArray
+        )
+      sendPoll(f)
+    } else {
+      request(
+        SendMessage(
+          ChatId.fromChat(msg.chat.id),
+          "No poll for this date exists...",
+          parseMode = Some(ParseMode.HTML)
+        )
+      ).map(_ => ())
+    }
+
   }
 
   onCommand("stop") { implicit msg =>

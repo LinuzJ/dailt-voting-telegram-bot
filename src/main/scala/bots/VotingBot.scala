@@ -52,8 +52,8 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
       case Success(t) => {
         mostRecentPollMessageId = t.messageId
         t.poll match {
-          case a: Option[Poll] => mostRecentPoll = a.get
-          case _               => println("No poll found in message?")
+          case a: Some[Poll] => mostRecentPoll = a.get
+          case _             => println("No poll found in message?")
         }
       }
       case Failure(e) => println("Error " + e)
@@ -79,37 +79,35 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
 
   def newPoll(date: String): Unit = polls(date) = new PollData(date)
 
-  def makePoll(): Unit = {
+  def makePoll(): Boolean = {
     mostRecentChatId match {
-      case id: Option[ChatId] => {
+      case id: Some[ChatId] => {
         val _name = timer.getCurrentDate()
         if (polls.exists(_._1 == _name)) {
-          val _poll = polls(_name)
-          val f =
-            SendPoll(
-              id.get,
-              _name,
-              _poll.getPollOptions().keys.toArray
-            )
-          sendPoll(f)
+          if (polls(_name).getPollOptions.keys.size > 0) {
+            val _poll = polls(_name)
+            val f =
+              SendPoll(
+                id.get,
+                _name,
+                _poll.getPollOptions().keys.toArray
+              )
+            sendPoll(f)
+            return true
+          } else this.sendMessage("There are no poll options for this poll..")
+
         } else {
-          request(
-            SendMessage(
-              id.get,
-              "No poll for this date exists...",
-              parseMode = Some(ParseMode.HTML)
-            )
-          ).map(_ => ())
+          this.sendMessage("There is no poll for this date!")
         }
       }
       case _ => println("No chatId...")
     }
-
+    false
   }
 
   def stopPoll(): Unit = {
     mostRecentChatId match {
-      case id: Option[ChatId] => {
+      case id: Some[ChatId] => {
         val s: StopPoll =
           StopPoll(id.get, Some(mostRecentPollMessageId))
         stopPollAndUpdateData(s)
@@ -135,7 +133,7 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
     {
       withArgs { args =>
         {
-          val option: Option[String] = args.headOption
+          val option: Option[String] = Some(args.mkString(" "))
 
           if (option.isDefined) {
             polls(timer.getCurrentDate()).addOption(option.get)

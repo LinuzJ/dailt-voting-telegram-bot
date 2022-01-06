@@ -27,8 +27,8 @@ class Timer extends Runnable {
   def run() {
     // Init first poll
     bot match {
-      case a: Option[VotingBot] => bot.get.newPoll(this.getCurrentDate())
-      case _                    =>
+      case a: Some[VotingBot] => bot.get.newPoll(this.getCurrentDate())
+      case _                  =>
     }
 
     var periodDone: (Boolean, Long) = (false, 0)
@@ -51,8 +51,8 @@ class Timer extends Runnable {
 
             // Send poll and wait for results
             val success: Boolean = bot match {
-              case b: Option[VotingBot] => b.get.makePoll; true
-              case _                    => false
+              case b: Some[VotingBot] => println("made pol"); b.get.makePoll()
+              case _                  => false
             }
             if (success) {
               bot.get.sendMessage(

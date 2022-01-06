@@ -43,7 +43,7 @@ abstract class CoreBot(val token: String)
 
   def sendMessage(text: String): Unit = {
     mostRecentChatId match {
-      case id: Option[ChatId] => {
+      case id: Some[ChatId] => {
         request(
           SendMessage(
             id.get,

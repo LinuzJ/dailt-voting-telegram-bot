@@ -51,8 +51,11 @@ class Timer extends Runnable {
 
             // Send poll and wait for results
             val success: Boolean = bot match {
-              case b: Some[VotingBot] => println("made pol"); b.get.makePoll()
-              case _                  => false
+              case b: Some[VotingBot] => {
+                println("made pol")
+                b.get.makePoll()
+              }
+              case _ => false
             }
             if (success) {
               bot.get.sendMessage(

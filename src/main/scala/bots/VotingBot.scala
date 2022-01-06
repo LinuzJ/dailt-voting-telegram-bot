@@ -123,7 +123,8 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
       SendMessage(
         ChatId.fromChat(msg.chat.id),
         s" ${TimeUnit.MILLISECONDS.toSeconds(timer.elapsedTime())}s has elapsed since you turned on the bot and now is minute ${timer
-          .getCurrentMinute()} and day ${timer.getCurrentDate()}",
+          .getCurrentMinute()} and day ${timer.getCurrentDate()}\n\n These are the availible polls ${polls.keys
+          .mkString(" ")}",
         parseMode = Some(ParseMode.HTML)
       )
     ).map(_ => ())

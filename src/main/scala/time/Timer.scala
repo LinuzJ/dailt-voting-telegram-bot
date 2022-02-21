@@ -1,5 +1,8 @@
 package time
 
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success}
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit
 import bots.VotingBot
@@ -97,7 +100,17 @@ class Timer extends Runnable {
                     )
                   )
                 // Make poll for each chat
-                grouped.forall(chat => b.get.makePoll(chat._2, chat._1))
+                val f = Future.sequence(
+                  grouped.map(chat => b.get.makePoll(chat._2, chat._1))
+                )
+                var re: Boolean = true
+                f.onComplete {
+                  case Success(s) => println(s"Evethings fine")
+                  case Failure(e) => {
+                    println(s"Something went wrong"); re = false
+                  }
+                }
+                re
               }
               case _ => false
             }

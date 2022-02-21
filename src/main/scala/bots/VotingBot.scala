@@ -29,12 +29,12 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
   private var mostRecentPollMessageId: Int = _
   private val timer: Timer = timerIn
 
-  def sendPoll(_poll: SendPoll, chatId: ChatId, pollId: Int) = {
+  def sendPoll(_poll: SendPoll, chatId: ChatId, pollId: Int): Future[Unit] = {
     val f: scala.concurrent.Future[Message] = request(
       _poll
     )
     println("Going to try and send poll")
-    val result: Try[Message] = Await.ready(f, Duration.Inf).value.get
+    val result: Try[Message] = Await.ready(f, 5 seconds).value.get
     println("Poll sent")
     val resultEither = result match {
       case Success(t) => chats(chatId)(pollId).setPollMsg(t.messageId)
@@ -70,7 +70,7 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
     chats(chatId)(id) = new PollData(id, date, chatId)
   }
 
-  def makePoll(pollId: Int, chatId: ChatId): Boolean = {
+  def makePoll(pollId: Int, chatId: ChatId): Future[Unit] = {
     if (chats(chatId).exists(_._1 == pollId)) {
 
       val _date: String = chats(chatId)(pollId).getPollDate()
@@ -85,18 +85,26 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
           )
 
         sendPoll(f, chatId, pollId)
-        return true
-      } else
-        this.sendMessage(
-          "There are no poll options for this poll..",
-          chatId
-        )
+      } else {
+        request(
+          SendMessage(
+            chatId,
+            "There are no poll options for this poll..",
+            parseMode = Some(ParseMode.HTML)
+          )
+        ).map(_ => ())
+      }
 
     } else {
-      this.sendMessage("There is no poll for this date!", chatId)
+      request(
+        SendMessage(
+          chatId,
+          "There are no poll for this date..",
+          parseMode = Some(ParseMode.HTML)
+        )
+      ).map(_ => ())
 
     }
-    false
   }
 
   def stopPolls(): Unit = {

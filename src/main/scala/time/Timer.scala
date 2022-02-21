@@ -4,6 +4,7 @@ import java.util.Calendar;
 import java.util.concurrent.TimeUnit
 import bots.VotingBot
 import com.bot4s.telegram.models.ChatId
+import utils.PollData
 
 class Timer extends Runnable {
 
@@ -46,6 +47,18 @@ class Timer extends Runnable {
       // Update time
       currTime = Calendar.getInstance()
       val currElapsedTime: Long = elapsedTime()
+
+      // Check if a chat has been inited and no poll has been added to it
+      if (bot.get.chats.map(_._2).isEmpty) {
+        val emptyChats
+            : Array[(ChatId, scala.collection.mutable.Map[Int, PollData])] =
+          bot.get.chats.toArray.filter(x => x._2.isEmpty)
+        // Make poll for all empty chats
+        for ((chat, poll) <- emptyChats) {
+          bot.get.newPoll(chat, counter, this.getCurrentDate())
+          counter += 1
+        }
+      }
 
       // Check if specified time period has elapsed
       if (currElapsedTime > 0) {

@@ -1,5 +1,6 @@
 package bots
 
+import utils.PollData
 import com.bot4s.telegram.api.RequestHandler
 import com.bot4s.telegram.future.TelegramBot
 import com.bot4s.telegram.clients.ScalajHttpClient
@@ -10,6 +11,7 @@ import scala.concurrent.Future
 import com.bot4s.telegram.models.ChatId
 import com.bot4s.telegram.methods.{SendMessage, _}
 import java.util.concurrent.TimeUnit
+import scala.collection.mutable.Map
 
 /** Core class for the bot
   *
@@ -27,26 +29,35 @@ abstract class CoreBot(val token: String)
 
   // Tracking chatIds
   var mostRecentChatId: Option[ChatId] = None
+  // Chats (ChatId, (PollId, Polldata))
+  var chats: Map[ChatId, Map[Int, PollData]] =
+    Map[ChatId, Map[Int, PollData]]()
 
-  onCommand("initChat") { implicit msg =>
+  onCommand("init") { implicit msg =>
+    val curChatId: ChatId = ChatId.fromChat(msg.chat.id)
+
     // Recognize chatId
-    mostRecentChatId = Some(ChatId.fromChat(msg.chat.id))
+    mostRecentChatId = Some(curChatId)
+
+    if (!chats.keySet.contains(curChatId)) {
+      chats(curChatId) = Map[Int, PollData]()
+    }
 
     request(
       SendMessage(
         ChatId.fromChat(msg.chat.id),
-        "All done!",
+        "Setup done!",
         parseMode = Some(ParseMode.HTML)
       )
     ).map(_ => ())
   }
 
-  def sendMessage(text: String): Unit = {
-    mostRecentChatId match {
-      case id: Some[ChatId] => {
+  def sendMessage(text: String, chatId: ChatId): Unit = {
+    chatId match {
+      case id: ChatId => {
         request(
           SendMessage(
-            id.get,
+            id,
             text,
             parseMode = Some(ParseMode.HTML)
           )

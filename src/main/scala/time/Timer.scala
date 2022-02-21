@@ -3,9 +3,11 @@ package time
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit
 import bots.VotingBot
+import com.bot4s.telegram.models.ChatId
 
 class Timer extends Runnable {
 
+  private var counter: Int = 1
   private var bot: Option[VotingBot] = None
   private var startTime: Calendar = Calendar.getInstance()
   private var currTime: Calendar = Calendar.getInstance()
@@ -27,8 +29,14 @@ class Timer extends Runnable {
   def run() {
     // Init first poll
     bot match {
-      case a: Some[VotingBot] => bot.get.newPoll(this.getCurrentDate())
-      case _                  =>
+      case a: Some[VotingBot] => {
+        // Init poll for each chat
+        bot.get.chats.foreach(x => {
+          bot.get.newPoll(x._1, counter, this.getCurrentDate())
+          counter += 1
+        })
+      }
+      case _ =>
     }
 
     var periodDone: (Boolean, Long) = (false, 0)
@@ -52,35 +60,65 @@ class Timer extends Runnable {
             // Send poll and wait for results
             val success: Boolean = bot match {
               case b: Some[VotingBot] => {
-                println("made pol")
-                b.get.makePoll()
+                // Latest pollId for each chatId
+                var grouped: Map[ChatId, Int] = b.get.chats
+                  .groupBy(_._1)
+                  .map(x =>
+                    (
+                      x._1,
+                      x._2.toArray
+                        .map(_._2.values)
+                        .flatten
+                        .maxBy(_.getPollId())
+                        .getPollId()
+                    )
+                  )
+                // Make poll for each chat
+                grouped.forall(chat => b.get.makePoll(chat._2, chat._1))
               }
               case _ => false
             }
             if (success) {
-              bot.get.sendMessage(
-                s"The poll is open!\n You have ${answerPeriodTimeInSeconds}s time to answer!"
+              bot.get.chats.foreach(x =>
+                bot.get.sendMessage(
+                  s"The poll is open!\n You have ${answerPeriodTimeInSeconds}s time to answer!",
+                  x._1
+                )
               )
               Thread.sleep((answerPeriodTimeInSeconds / 2) * 1000)
-              bot.get.sendMessage(
-                s"Half of the answering time is gone!\n You have ${answerPeriodTimeInSeconds / 2}s left to answer!"
+              bot.get.chats.foreach(x =>
+                bot.get.sendMessage(
+                  s"Half of the answering time is gone!\n You have ${answerPeriodTimeInSeconds / 2}s left to answer!",
+                  x._1
+                )
               )
               Thread.sleep((answerPeriodTimeInSeconds / 4) * 1000)
-              bot.get.sendMessage(
-                s"Only 1/4 of the answering time left!\n You have ${answerPeriodTimeInSeconds / 4}s left to answer!"
+              bot.get.chats.foreach(x =>
+                bot.get.sendMessage(
+                  s"Only 1/4 of the answering time left!\n You have ${answerPeriodTimeInSeconds / 4}s left to answer!",
+                  x._1
+                )
               )
-              Thread.sleep((answerPeriodTimeInSeconds / 4) * 1000)
-              bot.get.sendMessage(s"Time is up!")
-              // Stop the current poll
-              bot.get.stopPoll()
 
-              // Init new poll
-              bot.get.newPoll(this.getCurrentDate())
+              Thread.sleep((answerPeriodTimeInSeconds / 4) * 1000)
+              bot.get.chats.foreach(x =>
+                bot.get.sendMessage(
+                  s"Time is up!",
+                  x._1
+                )
+              )
+              // Stop the current poll
+              bot.get.stopPolls()
+
+              // Init new poll for each chat
+              bot.get.chats.keySet.foreach(id => {
+                bot.get.newPoll(id, counter, this.getCurrentDate())
+                counter += 1
+              })
             }
           } else {
             periodDone = (false, periodDone._2)
           }
-
         }
       }
     }

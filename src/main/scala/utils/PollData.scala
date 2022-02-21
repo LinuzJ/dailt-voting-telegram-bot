@@ -2,15 +2,20 @@ package utils
 
 import scala.collection.mutable.Map
 import com.bot4s.telegram.models.Poll
+import com.bot4s.telegram.models.ChatId
 
-class PollData(name: String) {
+class PollData(val id: Int, date: String, val chatId: ChatId) {
 
-  private val pollName: String = name
-  private var options: Map[String, Int] =
-    Map[String, Int]()
+  private val pollDate: String = date
+  private var options: Map[String, Int] = Map[String, Int]()
+  private var pollMsgId: Option[Int] = None
 
   def getPollOptions(): Map[String, Int] = options
-  def getPollName(): String = name
+  def getPollDate(): String = date
+  def getPollId(): Int = id
+  def getPollMsg(): Int = pollMsgId.getOrElse(0)
+
+  def setPollMsg(id: Int): Unit = pollMsgId = Some(id)
 
   def vote(name: String): Option[String] = {
     if (!options.keys.exists(_ == name)) {
@@ -45,7 +50,7 @@ class PollData(name: String) {
   }
 
   def representation(): String = {
-    var res: String = pollName + ":\n"
+    var res: String = pollDate + ":\n"
     options.foreach(option => {
       res = res + s"  ${option._1} -> ${option._2}\n"
     })

@@ -26,42 +26,28 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
   type Message = com.bot4s.telegram.models.Message
   type FutureRe = scala.concurrent.Future[Unit]
 
-  // important vars
   private var mostRecentPollMessageId: Int = _
-  private var mostRecentPoll: Poll = _
   private val timer: Timer = timerIn
-
-  // data
-  // Polls (ChatId)
-  private var polls: Map[Int, PollData] = Map[Int, PollData]()
-  private var results: Map[Poll, Array[(String, Int)]] =
-    Map[Poll, Array[(String, Int)]]()
-
-  def addToResult(_poll: Poll, _options: Array[PollOption]): Unit = {
-    results(_poll) = _options.map(option => {
-      (option.text, option.voterCount)
-    })
-  }
 
   def sendPoll(_poll: SendPoll, chatId: ChatId, pollId: Int) = {
     val f: scala.concurrent.Future[Message] = request(
       _poll
     )
+    println("Going to try and send poll")
     val result: Try[Message] = Await.ready(f, Duration.Inf).value.get
+    println("Poll sent")
     val resultEither = result match {
-      case Success(t) => {
-        chats(chatId)(pollId).setPollMsg(t.messageId)
-        t.poll match {
-          case a: Some[Poll] => mostRecentPoll = a.get
-          case _             => println("No poll found in message?")
-        }
-      }
+      case Success(t) => chats(chatId)(pollId).setPollMsg(t.messageId)
       case Failure(e) => println("Error " + e)
     }
     f.map(_ => ())
   }
 
-  def stopPollAndUpdateData(stop: StopPoll): FutureRe = {
+  def stopPollAndUpdateData(
+      chatId: ChatId,
+      pollId: Int,
+      stop: StopPoll
+  ): FutureRe = {
     val f = request(stop)
 
     val result: Try[Poll] = Await.ready(f, 5 seconds).value.get
@@ -70,8 +56,11 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
       case Failure(e) => println("Error " + e)
     }
     resultEither match {
-      case a: Poll => addToResult(a, a.options)
-      case _       => println("Something funny has happened")
+      case a: Poll => {
+        chats(chatId)(pollId).setResult(a, a.options)
+        chats(chatId)(pollId).setFinished()
+      }
+      case _ => println("Something funny has happened")
     }
 
     return f.map(_ => ())
@@ -87,11 +76,11 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
       val _date: String = chats(chatId)(pollId).getPollDate()
 
       if (chats(chatId)(pollId).getPollOptions.keys.size > 0) {
-        val _poll = chats(chatId)(pollId)
+        val _poll: PollData = chats(chatId)(pollId)
         val f =
           SendPoll(
             chatId,
-            "The poll of the day" + _date,
+            ("The poll of the day" + _date),
             _poll.getPollOptions().keys.toArray
           )
 
@@ -114,7 +103,7 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
     for ((chatId, poll) <- chats) {
       for ((pollid, polldata) <- poll) {
         val s: StopPoll = StopPoll(chatId, Some(polldata.getPollMsg()))
-        stopPollAndUpdateData(s)
+        stopPollAndUpdateData(chatId, pollid, s)
       }
     }
   }
@@ -168,29 +157,6 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
     }
   }
 
-  // onCommand("addPoll") { implicit msg =>
-  //   {
-  //     withArgs { args =>
-  //       {
-  //         val name: Option[String] = args.headOption
-  //         val rest: Array[String] = args.toArray.tail
-
-  //         if (name.isDefined) {
-  //           polls(name.get) = new PollData(name.get)
-  //           rest.foreach(option => polls(name.get).addOption(option))
-  //         }
-  //         request(
-  //           SendMessage(
-  //             ChatId.fromChat(msg.chat.id),
-  //             if (name.isDefined) "Success" else "Failiure..",
-  //             parseMode = Some(ParseMode.HTML)
-  //           )
-  //         ).map(_ => ())
-  //       }
-  //     }
-  //   }
-  // }
-
   onCommand("viewPolls") { implicit msg =>
     {
       request(
@@ -207,46 +173,19 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
 
   onCommand("data") { implicit msg =>
     {
+      val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
       request(
         SendMessage(
-          ChatId.fromChat(msg.chat.id),
-          (for ((poll, options) <- results) yield {
-            var re: String = poll.id
-            options.foreach(x => re = re + " " + x._1 + ": " + x._2)
+          thisChatId,
+          (for (poll <- chats(thisChatId).map(_._2)) yield {
+            var re: String = poll.getPollDate()
+            poll.getResults().foreach(x => re = re + " " + x._1 + ": " + x._2)
             re
           }).mkString("\n"),
           parseMode = Some(ParseMode.HTML)
         )
       ).map(_ => ())
     }
-  }
-
-  // onCommand("makePoll") { implicit msg =>
-  //   val _name = timer.getCurrentDate()
-  //   if (polls.exists(_._1 == _name)) {
-  //     val _poll = polls(_name)
-  //     val f =
-  //       SendPoll(
-  //         ChatId(msg.chat.id),
-  //         _name,
-  //         _poll.getPollOptions().keys.toArray
-  //       )
-  //     sendPoll(f)
-  //   } else {
-  //     request(
-  //       SendMessage(
-  //         ChatId.fromChat(msg.chat.id),
-  //         "No poll for this date exists...",
-  //         parseMode = Some(ParseMode.HTML)
-  //       )
-  //     ).map(_ => ())
-  //   }
-  // }
-
-  onCommand("stop") { implicit msg =>
-    val s: StopPoll =
-      StopPoll(ChatId(msg.chat.id), Some(mostRecentPollMessageId))
-    stopPollAndUpdateData(s)
   }
 
   onCommand("kill") { implicit msg =>

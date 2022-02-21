@@ -9,6 +9,8 @@ import bots.VotingBot
 import com.bot4s.telegram.models.ChatId
 import utils.PollData
 
+// TODO: FIX MAKEPOLL REQUESTS
+
 class Timer extends Runnable {
 
   private var counter: Int = 1

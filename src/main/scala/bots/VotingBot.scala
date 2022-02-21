@@ -82,34 +82,30 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
   }
 
   def makePoll(pollId: Int, chatId: ChatId): Boolean = {
-    ChatId match {
-      case id: ChatId => {
-        if (polls.exists(_._1 == pollId)) {
+    if (chats(chatId).exists(_._1 == pollId)) {
 
-          val _date: String = polls(pollId).getPollDate()
+      val _date: String = chats(chatId)(pollId).getPollDate()
 
-          if (polls(pollId).getPollOptions.keys.size > 0) {
-            val _poll = polls(pollId)
-            val f =
-              SendPoll(
-                id,
-                "The poll of the day" + _date,
-                _poll.getPollOptions().keys.toArray
-              )
+      if (chats(chatId)(pollId).getPollOptions.keys.size > 0) {
+        val _poll = chats(chatId)(pollId)
+        val f =
+          SendPoll(
+            chatId,
+            "The poll of the day" + _date,
+            _poll.getPollOptions().keys.toArray
+          )
 
-            sendPoll(f, chatId, pollId)
-            return true
-          } else
-            this.sendMessage(
-              "There are no poll options for this poll..",
-              chatId
-            )
+        sendPoll(f, chatId, pollId)
+        return true
+      } else
+        this.sendMessage(
+          "There are no poll options for this poll..",
+          chatId
+        )
 
-        } else {
-          this.sendMessage("There is no poll for this date!", chatId)
-        }
-      }
-      case _ => println("No chatId...")
+    } else {
+      this.sendMessage("There is no poll for this date!", chatId)
+
     }
     false
   }
@@ -128,13 +124,14 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
   }
 
   onCommand("info") { implicit msg =>
-    mostRecentChatId = Some(ChatId.fromChat(msg.chat.id))
+    val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
 
     request(
       SendMessage(
-        ChatId.fromChat(msg.chat.id),
+        thisChatId,
         s" ${TimeUnit.MILLISECONDS.toSeconds(timer.elapsedTime())}s has elapsed since you turned on the bot and now is minute ${timer
-          .getCurrentMinute()} and day ${timer.getCurrentDate()}\n\n These are the availible polls ${polls.keys
+          .getCurrentMinute()} and day ${timer.getCurrentDate()}\n\n These are the availible polls ${chats(thisChatId)
+          .map(_._2.getPollDate())
           .mkString(" ")}",
         parseMode = Some(ParseMode.HTML)
       )

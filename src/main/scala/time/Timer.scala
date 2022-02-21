@@ -14,6 +14,7 @@ class Timer extends Runnable {
   private var currTime: Calendar = Calendar.getInstance()
   private val periodTimeInMinutes: Int = 1
   private val answerPeriodTimeInSeconds: Int = 10
+
   // Init bot
   def setBot(newBot: VotingBot): Unit = bot = Some(newBot)
 
@@ -49,13 +50,19 @@ class Timer extends Runnable {
       val currElapsedTime: Long = elapsedTime()
 
       // Check if a chat has been inited and no poll has been added to it
-      if (bot.get.chats.map(_._2).isEmpty) {
+      if (bot.get.chats.size != 0) {
         val emptyChats
-            : Array[(ChatId, scala.collection.mutable.Map[Int, PollData])] =
-          bot.get.chats.toArray.filter(x => x._2.isEmpty)
+            : Array[(ChatId, scala.collection.mutable.Map[Int, PollData])] = {
+          val arr = bot.get.chats.toArray
+          arr.filter(p => p._2.size == 0)
+        }
+
         // Make poll for all empty chats
         for ((chat, poll) <- emptyChats) {
+          println(bot.get.chats)
           bot.get.newPoll(chat, counter, this.getCurrentDate())
+          println("Added poll!")
+          println(bot.get.chats)
           counter += 1
         }
       }
@@ -66,13 +73,16 @@ class Timer extends Runnable {
           (currElapsedTime % TimeUnit.MINUTES
             .toMillis(periodTimeInMinutes)) == 0
         ) {
-          if (!periodDone._1 && (currElapsedTime != periodDone._2)) {
+          if (
+            !periodDone._1 && (currElapsedTime != periodDone._2) && !bot.get.chats.isEmpty
+          ) {
             // Update period
             periodDone = (true, currElapsedTime)
 
             // Send poll and wait for results
             val success: Boolean = bot match {
               case b: Some[VotingBot] => {
+                println(b.get.chats)
                 // Latest pollId for each chatId
                 var grouped: Map[ChatId, Int] = b.get.chats
                   .groupBy(_._1)

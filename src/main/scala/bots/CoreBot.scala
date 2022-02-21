@@ -41,15 +41,23 @@ abstract class CoreBot(val token: String)
 
     if (!chats.keySet.contains(curChatId)) {
       chats(curChatId) = Map[Int, PollData]()
+      request(
+        SendMessage(
+          ChatId.fromChat(msg.chat.id),
+          "Setup done!",
+          parseMode = Some(ParseMode.HTML)
+        )
+      ).map(_ => ())
+    } else {
+      request(
+        SendMessage(
+          ChatId.fromChat(msg.chat.id),
+          "Chat already setup!",
+          parseMode = Some(ParseMode.HTML)
+        )
+      ).map(_ => ())
     }
 
-    request(
-      SendMessage(
-        ChatId.fromChat(msg.chat.id),
-        "Setup done!",
-        parseMode = Some(ParseMode.HTML)
-      )
-    ).map(_ => ())
   }
 
   def sendMessage(text: String, chatId: ChatId): Unit = {

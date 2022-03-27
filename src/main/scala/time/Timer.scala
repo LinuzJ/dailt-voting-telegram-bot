@@ -54,12 +54,11 @@ class Timer extends Runnable {
       currTime = Calendar.getInstance()
       val currElapsedTime: Long = elapsedTime()
 
-      // Check if a chat has been inited and no poll has been added to it
+      // Check if a chat has been initialized and no poll has been added to it
       if (bot.get.chats.size != 0) {
         val emptyChats
             : Array[(ChatId, scala.collection.mutable.Map[Int, PollData])] = {
-          val arr = bot.get.chats.toArray
-          arr.filter(p => p._2.size == 0)
+          bot.get.chats.toArray.filter(p => p._2.size == 0)
         }
 
         // Make poll for all empty chats
@@ -87,35 +86,12 @@ class Timer extends Runnable {
             // Send poll and wait for results
             val success: Boolean = bot match {
               case b: Some[VotingBot] => {
-                println(b.get.chats)
-                // Latest pollId for each chatId
-                var grouped: Map[ChatId, Int] = b.get.chats
-                  .groupBy(_._1)
-                  .map(x =>
-                    (
-                      x._1,
-                      x._2.toArray
-                        .map(_._2.values)
-                        .flatten
-                        .maxBy(_.getPollId())
-                        .getPollId()
-                    )
-                  )
-                // Make poll for each chat
-                val f = Future.sequence(
-                  grouped.map(chat => b.get.makePoll(chat._2, chat._1))
-                )
-                var re: Boolean = true
-                f.onComplete {
-                  case Success(s) => println(s"Evethings fine")
-                  case Failure(e) => {
-                    println(s"Something went wrong"); re = false
-                  }
-                }
-                re
+                //Call makePolls function from the bot
+                b.get.makePolls()
               }
               case _ => false
             }
+
             if (success) {
               bot.get.chats.foreach(x =>
                 bot.get.sendMessage(

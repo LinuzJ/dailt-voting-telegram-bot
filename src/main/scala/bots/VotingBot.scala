@@ -70,7 +70,56 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
     chats(chatId)(id) = new PollData(id, date, chatId)
   }
 
-  def makePoll(pollId: Int, chatId: ChatId): Future[Unit] = {
+  def makePolls(): Boolean = {
+    var re: Boolean = false
+    // Latest pollId for each chatId
+    var grouped: scala.collection.immutable.Map[ChatId, Int] = this.chats
+      .groupBy(_._1)
+      .map(x =>
+        (
+          x._1,
+          x._2.toArray
+            .map(_._2.values)
+            .flatten
+            .maxBy(_.getPollId())
+            .getPollId()
+        )
+      )
+
+    val f: Future[List[(Boolean, ChatId)]] = Future {
+      grouped
+        .map(x => {
+          var re: (Boolean, ChatId) = (false, x._1)
+          val f_sendPoll: Future[Boolean] = this.makePoll(x._2, x._1)
+          f_sendPoll onComplete {
+            case Success(bool) => re = (bool, x._1)
+            case Failure(t) =>
+              println("An error has occurred: " + t.getMessage);
+              re = (false, x._1)
+          }
+          re
+        })
+        .toList
+    }
+
+    f onComplete {
+      case Success(sentChats) => {
+        if (sentChats.forall(_._1)) {
+          re = true
+        } else {
+          val id: ChatId = sentChats.filter(!_._1).head._2
+          println("An error has occurred in chat: " + id)
+          re = false
+        }
+      }
+      case Failure(t) =>
+        println("An error has occurred: " + t.getMessage); re = false
+    }
+
+    re
+  }
+
+  def makePoll(pollId: Int, chatId: ChatId): Future[Boolean] = {
     if (chats(chatId).exists(_._1 == pollId)) {
 
       val _date: String = chats(chatId)(pollId).getPollDate()
@@ -85,6 +134,7 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
           )
 
         sendPoll(f, chatId, pollId)
+        Future(true)
       } else {
         request(
           SendMessage(
@@ -92,7 +142,7 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
             "There are no poll options for this poll..",
             parseMode = Some(ParseMode.HTML)
           )
-        ).map(_ => ())
+        ).map(_ => (false))
       }
 
     } else {
@@ -102,8 +152,7 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
           "There are no poll for this date..",
           parseMode = Some(ParseMode.HTML)
         )
-      ).map(_ => ())
-
+      ).map(_ => (false))
     }
   }
 
@@ -207,6 +256,18 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
         parseMode = Some(ParseMode.HTML)
       )
     ).map(_ => ())
+  }
+
+  onCommand("help") { implicit msg =>
+    {
+      request(
+        SendMessage(
+          ChatId.fromChat(msg.chat.id),
+          "",
+          parseMode = Some(ParseMode.HTML)
+        )
+      ).map(_ => ())
+    }
   }
 
   def test(): String = "test"

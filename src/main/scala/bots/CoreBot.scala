@@ -29,10 +29,13 @@ abstract class CoreBot(val token: String)
 
   // Tracking chatIds
   var mostRecentChatId: Option[ChatId] = None
-  // Chats (ChatId, (PollId, Polldata))
-  var chats: Map[ChatId, Map[Int, PollData]] =
-    Map[ChatId, Map[Int, PollData]]()
 
+  // Chats (ChatId, (PollId, Polldata))
+  var chats: Map[ChatId, Map[Int, PollData]] = Map[ChatId, Map[Int, PollData]]()
+
+  /*
+      The Command for initalizing a chat (adding it to the collection of tracked chats)
+   */
   onCommand("init") { implicit msg =>
     val curChatId: ChatId = ChatId.fromChat(msg.chat.id)
 

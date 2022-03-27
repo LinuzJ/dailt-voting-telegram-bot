@@ -33,36 +33,6 @@ abstract class CoreBot(val token: String)
   // Chats (ChatId, (PollId, Polldata))
   var chats: Map[ChatId, Map[Int, PollData]] = Map[ChatId, Map[Int, PollData]]()
 
-  /*
-      The Command for initalizing a chat (adding it to the collection of tracked chats)
-   */
-  onCommand("init") { implicit msg =>
-    val curChatId: ChatId = ChatId.fromChat(msg.chat.id)
-
-    // Recognize chatId
-    mostRecentChatId = Some(curChatId)
-
-    if (!chats.keySet.contains(curChatId)) {
-      chats(curChatId) = Map[Int, PollData]()
-      request(
-        SendMessage(
-          ChatId.fromChat(msg.chat.id),
-          "Setup done!",
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => ())
-    } else {
-      request(
-        SendMessage(
-          ChatId.fromChat(msg.chat.id),
-          "Chat already setup!",
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => ())
-    }
-
-  }
-
   def sendMessage(text: String, chatId: ChatId): Unit = {
     chatId match {
       case id: ChatId => {

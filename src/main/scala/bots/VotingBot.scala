@@ -2,7 +2,6 @@ package bots
 
 import bots.CoreBot
 import utils.PollData
-import time.Timer
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import scala.collection.mutable.Map
@@ -35,20 +34,6 @@ class VotingBot(token: String) extends CoreBot(token) {
     format.format(Calendar.getInstance().getTime())
   }
 
-  def sendPoll(_poll: SendPoll, chatId: ChatId, pollId: Int): Future[Unit] = {
-    val f: Future[Message] = request(
-      _poll
-    )
-    println("Sending poll")
-    f.onComplete {
-      case Success(t) => chats(chatId)(pollId).setPollMsg(t.messageId)
-      case Failure(e) => println("Error " + e)
-    }
-    println("Poll Sent!")
-
-    Future()
-  }
-
   def stopPollAndUpdateData(
       chatId: ChatId,
       pollId: Int,
@@ -77,7 +62,6 @@ class VotingBot(token: String) extends CoreBot(token) {
   }
 
   def makePolls(): Boolean = {
-    var re: Boolean = true
     // Latest pollId for each chatId
     var grouped: scala.collection.immutable.Map[ChatId, Int] = this.chats
       .groupBy(_._1)
@@ -112,19 +96,18 @@ class VotingBot(token: String) extends CoreBot(token) {
     f onComplete {
       case Success(sentChats) => {
         if (sentChats.forall(_._1)) {
-          re = true
+          return true
         } else {
           println(
             "An error has occurred in chat: " + sentChats.filter(!_._1).head._2
           )
-          re = true
+          return true
         }
       }
       case Failure(t) =>
-        println("An error has occurred: " + t.getMessage); re = false
+        println("An error has occurred: " + t.getMessage); return false
     }
-
-    re
+    true
   }
 
   def makePoll(pollId: Int, chatId: ChatId): Future[Boolean] = {
@@ -172,6 +155,20 @@ class VotingBot(token: String) extends CoreBot(token) {
     }
   }
 
+  def sendPoll(_poll: SendPoll, chatId: ChatId, pollId: Int): Future[Unit] = {
+    val f: Future[Message] = request(
+      _poll
+    )
+    println("Sending poll")
+    f.onComplete {
+      case Success(t) => chats(chatId)(pollId).setPollMsg(t.messageId)
+      case Failure(e) => println("Error " + e)
+    }
+    println("Poll Sent!")
+
+    Future()
+  }
+
   def stopPolls(): Unit = {
     for ((chatId, poll) <- chats) {
       for ((pollid, polldata) <- poll) {
@@ -184,21 +181,6 @@ class VotingBot(token: String) extends CoreBot(token) {
   def findLatestPoll(chatId: ChatId): Option[Int] = {
     Some(chats(chatId).keys.max)
   }
-
-  // onCommand("info") { implicit msg =>
-  //   val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
-
-  //   request(
-  //     SendMessage(
-  //       thisChatId,
-  //       s" ${TimeUnit.MILLISECONDS.toSeconds(timer.elapsedTime())}s has elapsed since you turned on the bot and now is minute ${timer
-  //         .getCurrentMinute()} and day ${timer.getCurrentDate()}\n\n These are the availible polls ${chats(thisChatId)
-  //         .map(_._2.getPollDate())
-  //         .mkString(" ")}",
-  //       parseMode = Some(ParseMode.HTML)
-  //     )
-  //   ).map(_ => ())
-  // }
 
   onCommand("addOption") { implicit msg =>
     {

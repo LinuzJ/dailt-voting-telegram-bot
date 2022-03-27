@@ -8,7 +8,15 @@ import java.text.SimpleDateFormat
 
 object Main extends App {
 
+  val timer = new Timer()
+
   private val key: Option[String] = sys.env.get("TELEGRAM_TOKEN")
+
+  if (!key.isDefined) {
+    Console.err.println("Please provide token in env variable")
+    System.exit(0)
+  }
+
   private var bot: VotingBot = _
   private val periodTimeInMinutes: Int = 1
   private val answerPeriodTimeInSeconds: Int = 10
@@ -25,69 +33,61 @@ object Main extends App {
     format.format(Calendar.getInstance().getTime())
   }
 
-  val timer = new Timer()
+  bot = new VotingBot(key.get)
 
-  if (key.isDefined) {
-    bot = new VotingBot(key.get)
+  // Init first poll
+  bot.chats.foreach(x => {
+    bot.newPoll(x._1, counter, this.getCurrentDate())
+    counter += 1
+  })
 
-    // Init first poll
-    bot.chats.foreach(x => {
-      bot.newPoll(x._1, counter, this.getCurrentDate())
-      counter += 1
-    })
-
-    def timerTask() = {
-      val success: Boolean = bot.makePolls()
-      if (success) {
-        bot.chats.foreach(x =>
-          bot.sendMessage(
-            s"The poll is open!\n You have ${answerPeriodTimeInSeconds}s time to answer!",
-            x._1
-          )
+  def timerTask(): Unit = {
+    val success: Boolean = bot.makePolls()
+    if (success) {
+      bot.chats.foreach(x =>
+        bot.sendMessage(
+          s"The poll is open!\n You have ${answerPeriodTimeInSeconds}s time to answer!",
+          x._1
         )
-        Thread.sleep((answerPeriodTimeInSeconds / 2) * 1000)
-        bot.chats.foreach(x =>
-          bot.sendMessage(
-            s"Half of the answering time is gone!\n You have ${answerPeriodTimeInSeconds / 2}s left to answer!",
-            x._1
-          )
+      )
+      Thread.sleep((answerPeriodTimeInSeconds / 2) * 1000)
+      bot.chats.foreach(x =>
+        bot.sendMessage(
+          s"Half of the answering time is gone!\n You have ${answerPeriodTimeInSeconds / 2}s left to answer!",
+          x._1
         )
-        Thread.sleep((answerPeriodTimeInSeconds / 4) * 1000)
-        bot.chats.foreach(x =>
-          bot.sendMessage(
-            s"Only 1/4 of the answering time left!\n You have ${answerPeriodTimeInSeconds / 4}s left to answer!",
-            x._1
-          )
+      )
+      Thread.sleep((answerPeriodTimeInSeconds / 4) * 1000)
+      bot.chats.foreach(x =>
+        bot.sendMessage(
+          s"Only 1/4 of the answering time left!\n You have ${answerPeriodTimeInSeconds / 4}s left to answer!",
+          x._1
         )
+      )
 
-        Thread.sleep((answerPeriodTimeInSeconds / 4) * 1000)
-        bot.chats.foreach(x =>
-          bot.sendMessage(
-            s"Time is up!",
-            x._1
-          )
+      Thread.sleep((answerPeriodTimeInSeconds / 4) * 1000)
+      bot.chats.foreach(x =>
+        bot.sendMessage(
+          s"Time is up!",
+          x._1
         )
-        // Stop the current poll
-        bot.stopPolls()
+      )
+      // Stop the current poll
+      bot.stopPolls()
 
-        // Init new poll for each chat
-        bot.chats.keySet.foreach(id => {
-          bot.newPoll(id, counter, this.getCurrentDate())
-          counter += 1
-        })
-      }
+      // Init new poll for each chat
+      bot.chats.keySet.foreach(id => {
+        bot.newPoll(id, counter, this.getCurrentDate())
+        counter += 1
+      })
     }
-
-    timer.schedule(
-      function2TimerTask(timerTask),
-      periodTimeInMinutes * 20000,
-      periodTimeInMinutes * 20000
-    )
-
-  } else {
-    Console.err.println("Please provide token in env variable")
-    System.exit(0)
   }
+
+  timer.schedule(
+    function2TimerTask(timerTask),
+    periodTimeInMinutes * 20000,
+    periodTimeInMinutes * 20000
+  )
 
   val eol = bot.run()
   println("Press ENTER to shutdown the bot")

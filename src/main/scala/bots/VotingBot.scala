@@ -30,17 +30,17 @@ class VotingBot(token: String, timerIn: Timer) extends CoreBot(token) {
   private val timer: Timer = timerIn
 
   def sendPoll(_poll: SendPoll, chatId: ChatId, pollId: Int): Future[Unit] = {
-    val f: scala.concurrent.Future[Message] = request(
+    val f: Future[Message] = request(
       _poll
     )
     println("Going to try and send poll")
-    val result: Try[Message] = Await.ready(f, 5 seconds).value.get
-    println("Poll sent")
-    val resultEither = result match {
+    f.onComplete {
       case Success(t) => chats(chatId)(pollId).setPollMsg(t.messageId)
       case Failure(e) => println("Error " + e)
     }
-    f.map(_ => ())
+    println("Poll Sent!")
+
+    Future()
   }
 
   def stopPollAndUpdateData(

@@ -2,6 +2,8 @@ package bots
 
 import bots.CoreBot
 import utils.PollData
+import utils.Func
+
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import scala.collection.mutable.Map
@@ -28,34 +30,6 @@ class VotingBot(token: String) extends CoreBot(token) {
   type FutureRe = scala.concurrent.Future[Unit]
 
   private var mostRecentPollMessageId: Int = _
-
-  def getCurrentDate(): String = {
-    val format = new SimpleDateFormat("d-M-y")
-    format.format(Calendar.getInstance().getTime())
-  }
-
-  def stopPollAndUpdateData(
-      chatId: ChatId,
-      pollId: Int,
-      stop: StopPoll
-  ): FutureRe = {
-    val f = request(stop)
-
-    val result: Try[Poll] = Await.ready(f, 5 seconds).value.get
-    val resultEither = result match {
-      case Success(t) => t
-      case Failure(e) => println("Error " + e)
-    }
-    resultEither match {
-      case a: Poll => {
-        chats(chatId)(pollId).setResult(a, a.options)
-        chats(chatId)(pollId).setFinished()
-      }
-      case _ => println("Something funny has happened")
-    }
-
-    return f.map(_ => ())
-  }
 
   def newPoll(chatId: ChatId, id: Int, date: String): Unit = {
     chats(chatId)(id) = new PollData(id, date, chatId)
@@ -169,6 +143,29 @@ class VotingBot(token: String) extends CoreBot(token) {
     Future()
   }
 
+  def stopPollAndUpdateData(
+      chatId: ChatId,
+      pollId: Int,
+      stop: StopPoll
+  ): FutureRe = {
+    val f = request(stop)
+
+    val result: Try[Poll] = Await.ready(f, 5 seconds).value.get
+    val resultEither = result match {
+      case Success(t) => t
+      case Failure(e) => println("Error " + e)
+    }
+    resultEither match {
+      case a: Poll => {
+        chats(chatId)(pollId).setResult(a, a.options)
+        chats(chatId)(pollId).setFinished()
+      }
+      case _ => println("Something funny has happened")
+    }
+
+    return f.map(_ => ())
+  }
+
   def stopPolls(): Unit = {
     for ((chatId, poll) <- chats) {
       for ((pollid, polldata) <- poll) {
@@ -255,7 +252,7 @@ class VotingBot(token: String) extends CoreBot(token) {
     if (!chats.keySet.contains(curChatId)) {
       chats(curChatId) = Map[Int, PollData]()
 
-      this.newPoll(chats.head._1, 1000, this.getCurrentDate())
+      this.newPoll(chats.head._1, 1000, Func.getCurrentDate())
 
       request(
         SendMessage(

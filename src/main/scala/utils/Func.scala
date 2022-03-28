@@ -82,7 +82,7 @@ object Func {
     // Send out results
     b.chats.foreach(x =>
       b.sendMessage(
-        x._2.toArray.sortBy(_._1).head._2.representation(),
+        x._2.toArray.sortBy(-_._1).head._2.representation(),
         x._1
       )
     )

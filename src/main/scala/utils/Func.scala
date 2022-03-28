@@ -9,11 +9,17 @@ import java.util.Calendar
 
 object Func {
 
+  /*
+    Simple function to get current date in specific format
+   */
   def getCurrentDate(): String = {
     val format = new SimpleDateFormat("d-M-y")
     format.format(Calendar.getInstance().getTime())
   }
 
+  /*
+    Function submitted to scheduled task
+   */
   implicit def function2TimerTask(
       function: (VotingBot, Int, Counter) => Unit,
       bot: VotingBot,
@@ -25,6 +31,14 @@ object Func {
     }
   }
 
+  /*
+    The actual task performed during each scheduled work
+
+    Functionality:
+      1. Sending out a poll to each chat with all options added today
+      2. Closes the polls after specified period
+      3. Sends a summary of the polls to each chat
+   */
   def timerTask(b: VotingBot, time: Int, counter: Counter): Unit = {
     val success: Boolean = b.makePolls()
     if (success) {

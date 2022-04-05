@@ -27,7 +27,7 @@ object Main extends App {
 
   // Init first poll
   bot.chats.foreach(x => {
-    bot.newPoll(x._1, counter.getCounter(), Func.getCurrentDate())
+    bot.newPoll(x._1, counter.getCounter(), counter.getCounter().toString())
     counter.increment()
   })
 

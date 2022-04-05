@@ -3,9 +3,14 @@ package utils
 import bots.VotingBot
 import utils.Counter
 
+import scala.collection.mutable.Buffer
+import scala.concurrent.{Future, Await}
+import scala.util.{Failure, Success, Try}
 import java.util.TimerTask
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import scala.concurrent._
+import ExecutionContext.Implicits.global
 
 object Func {
 
@@ -76,8 +81,20 @@ object Func {
         x._1
       )
     )
+
     // Stop the current poll
-    b.stopPolls()
+    val fStops: Future[Buffer[Option[String]]] = b.stopPolls()
+
+    fStops onComplete {
+      case Success(list) => {
+        for (err <- list) {
+          if (err.isDefined) { println(err.get) }
+        }
+      }
+      case Failure(t) => {
+        println("An error has occurred: " + t.getMessage);
+      }
+    }
 
     // Send out results
     b.chats.foreach(x =>
@@ -88,8 +105,10 @@ object Func {
     )
     // Init new poll for each chat
     b.chats.keySet.foreach(id => {
-      b.newPoll(id, counter.getCounter(), this.getCurrentDate())
+      b.newPoll(id, counter.getCounter(), counter.getCounter().toString())
       counter.increment()
+
+      println("The counter is" + counter.getCounter())
     })
   }
 

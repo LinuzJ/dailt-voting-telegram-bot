@@ -4,6 +4,7 @@ import bots.CoreBot
 import utils.PollData
 import utils.Func
 
+import scala.collection.mutable.Buffer
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import scala.collection.mutable.Map
@@ -152,32 +153,54 @@ class VotingBot(token: String) extends CoreBot(token) {
       chatId: ChatId,
       pollId: Int,
       stop: StopPoll
-  ): FutureRe = {
-    val f = request(stop)
+  ): Future[Option[String]] = {
+
+    // Init error message. Also return value for function
+    var errorMessage: Option[String] = None
+
+    val f: Future[Poll] = request(stop)
 
     val result: Try[Poll] = Await.ready(f, 5 seconds).value.get
     val resultEither = result match {
-      case Success(t) => t
+      case Success(t) => {
+        t match {
+          case a: Poll => {
+            chats(chatId)(pollId).setResult(a, a.options)
+            chats(chatId)(pollId).setFinished()
+          }
+          case _ =>
+            errorMessage = Some(
+              s"Error while adding data to ${pollId} in chat ${chatId}"
+            )
+        }
+      }
       case Failure(e) => println("Error " + e)
     }
-    resultEither match {
-      case a: Poll => {
-        chats(chatId)(pollId).setResult(a, a.options)
-        chats(chatId)(pollId).setFinished()
-      }
-      case _ => println("Something funny has happened")
-    }
 
-    return f.map(_ => ())
+    return f.map(_ => errorMessage)
   }
 
-  def stopPolls(): Unit = {
+  def stopPolls(): Future[Buffer[Option[String]]] = {
+    var errorList: Buffer[Option[String]] = Buffer[Option[String]]()
+
     for ((chatId, poll) <- chats) {
-      for ((pollid, polldata) <- poll) {
+      for ((pollId, polldata) <- poll) {
         val s: StopPoll = StopPoll(chatId, Some(polldata.getPollMsg()))
-        stopPollAndUpdateData(chatId, pollid, s)
+
+        val fErr: Future[Option[String]] =
+          stopPollAndUpdateData(chatId, pollId, s)
+
+        fErr onComplete {
+          case Success(e) => errorList += e
+          case Failure(t) =>
+            errorList += Some(
+              s"Error while adding data to ${pollId} in chat ${chatId}"
+            )
+        }
+
       }
     }
+    Future { errorList }
   }
 
   def findLatestPoll(chatId: ChatId): Option[Int] = {
@@ -257,7 +280,7 @@ class VotingBot(token: String) extends CoreBot(token) {
     if (!chats.keySet.contains(curChatId)) {
       chats(curChatId) = Map[Int, PollData]()
 
-      this.newPoll(chats.head._1, 1000, Func.getCurrentDate())
+      this.newPoll(chats.head._1, 1000, "1000")
 
       request(
         SendMessage(

@@ -22,6 +22,11 @@ import simulacrum.op
 import java.text.SimpleDateFormat
 import java.util.Calendar;
 
+/*
+  Main class for the voting bot.
+  Subclass of CoreBot.
+  Keeps track of polls and can send info to the corresponding chats
+ */
 class VotingBot(token: String) extends CoreBot(token) {
 
   // Easier types
@@ -291,7 +296,7 @@ class VotingBot(token: String) extends CoreBot(token) {
       request(
         SendMessage(
           ChatId.fromChat(msg.chat.id),
-          "",
+          "Here are the availible commands:\n - /help\n - /init\n - /addOption\n - /data\n - /kill",
           parseMode = Some(ParseMode.HTML)
         )
       ).map(_ => ())

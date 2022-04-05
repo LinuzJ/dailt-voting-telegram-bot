@@ -5,6 +5,15 @@ import com.bot4s.telegram.models.Poll
 import com.bot4s.telegram.models.ChatId
 import com.bot4s.telegram.models.PollOption
 
+/** Class for a Poll. Keeping track of votes and data.
+  *
+  * @param id
+  *   PollId. Used to track Polls.
+  * @param date
+  *   The name of this poll. Usually the date
+  * @param chatId
+  *   The chatId in which this Poll is initiated
+  */
 class PollData(val id: Int, date: String, val chatId: ChatId) {
 
   private val pollDate: String = date

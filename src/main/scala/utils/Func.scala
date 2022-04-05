@@ -103,12 +103,11 @@ object Func {
         x._1
       )
     )
+
     // Init new poll for each chat
     b.chats.keySet.foreach(id => {
-      b.newPoll(id, counter.getCounter(), counter.getCounter().toString())
       counter.increment()
-
-      println("The counter is" + counter.getCounter())
+      b.newPoll(id, counter.getCounter(), counter.getCounter().toString())
     })
   }
 

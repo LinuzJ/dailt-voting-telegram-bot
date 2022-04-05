@@ -4,6 +4,7 @@ import scala.collection.mutable.Map
 import com.bot4s.telegram.models.Poll
 import com.bot4s.telegram.models.ChatId
 import com.bot4s.telegram.models.PollOption
+import simulacrum.op
 
 /** Class for a Poll. Keeping track of votes and data.
   *
@@ -19,7 +20,7 @@ class PollData(val id: Int, date: String, val chatId: ChatId) {
   private val pollDate: String = date
   private var options: Map[String, Int] = Map[String, Int]()
   private var pollMsgId: Option[Int] = None
-  private var results: Array[(String, Int)] = Array[(String, Int)]()
+  private var results: Map[String, Int] = Map[String, Int]()
 
   var isFinished: Boolean = false
 
@@ -27,11 +28,20 @@ class PollData(val id: Int, date: String, val chatId: ChatId) {
   def getPollDate(): String = date
   def getPollId(): Int = id
   def getPollMsg(): Int = pollMsgId.getOrElse(0)
-  def getResults(): Array[(String, Int)] = results
+  def getResults(): Map[String, Int] = results
 
   def setPollMsg(id: Int): Unit = pollMsgId = Some(id)
+
   def setResult(_poll: Poll, _options: Array[PollOption]): Unit = {
-    results = _options.map(option => (option.text, option.voterCount))
+    for (option <- _options) {
+      val t: String = option.text
+      if (results.keys.toArray.contains(t)) {
+        results(t) = results(t) + option.voterCount
+      } else {
+        results(t) = option.voterCount
+      }
+    }
+
   }
   def setFinished(): Unit = isFinished = true
 
@@ -67,7 +77,7 @@ class PollData(val id: Int, date: String, val chatId: ChatId) {
 
   def representation(): String = {
     var res: String = pollDate + ":\n"
-    options.foreach(option => {
+    results.foreach(option => {
       res = res + s"  ${option._1} -> ${option._2}\n"
     })
     res

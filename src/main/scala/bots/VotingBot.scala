@@ -280,7 +280,7 @@ class VotingBot(token: String) extends CoreBot(token) {
     if (!chats.keySet.contains(curChatId)) {
       chats(curChatId) = Map[Int, PollData]()
 
-      this.newPoll(chats.head._1, 1000, "1000")
+      this.newPoll(chats.head._1, -1, "init")
 
       request(
         SendMessage(

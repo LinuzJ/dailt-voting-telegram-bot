@@ -96,6 +96,8 @@ object Func {
       }
     }
 
+    println(b.chats)
+
     // Send out results
     b.chats.foreach(x =>
       b.sendMessage(

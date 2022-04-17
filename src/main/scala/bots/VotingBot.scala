@@ -24,6 +24,9 @@ import java.text.SimpleDateFormat
 import java.util.Calendar;
 
 /*
+   @param token
+    Bot's token.
+
   Main class for the voting bot.
   Subclass of CoreBot.
   Keeps track of polls and can send info to the corresponding chats

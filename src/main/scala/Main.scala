@@ -19,12 +19,10 @@ object Main extends App {
     System.exit(0)
   }
 
-  private var bot: VotingBot = _
-  private val periodTimeInMinutes: Int = 1
+  private var bot: VotingBot = new VotingBot(key.get)
+  private val periodTimeInMinutes: Int = 5
   private val answerPeriodTimeInSeconds: Int = 10
   private val counter: Counter = new Counter
-
-  bot = new VotingBot(key.get)
 
   // Init first poll
   bot.chats.foreach(x => {

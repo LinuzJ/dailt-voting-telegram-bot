@@ -23,7 +23,7 @@ object Main extends App {
 
   private var bot: VotingBot = new VotingBot(key.get)
   private val periodTimeInMinutes: Int = 5
-  private val answerPeriodTimeInSeconds: Int = 10
+  private val answerPeriodTimeInSeconds: Int = 60
   private val counter: Counter = new Counter
 
   // Init first poll
@@ -32,6 +32,7 @@ object Main extends App {
     counter.increment()
   })
 
+  // Schedule the polling
   timer.schedule(
     Func.function2TimerTask(
       Func.timerTask,
@@ -43,12 +44,17 @@ object Main extends App {
     periodTimeInMinutes * 20 * 1000
   )
 
+  // Run the bot
   val eol = bot.run()
-  println("Started")
+
+  println("Up and Running!")
+
+  // Add shutdown hook to excecute when closing thread
   sys.addShutdownHook(() => {
     timer.cancel()
     bot.shutdown()
   })
+
   Await.result(eol, Duration.Inf)
 
 }

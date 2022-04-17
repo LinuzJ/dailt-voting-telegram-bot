@@ -23,14 +23,12 @@ import simulacrum.op
 import java.text.SimpleDateFormat
 import java.util.Calendar;
 
-/*
-   @param token
-    Bot's token.
-
-  Main class for the voting bot.
-  Subclass of CoreBot.
-  Keeps track of polls and can send info to the corresponding chats
- */
+/** @param token
+  *   Bot's token.
+  *
+  * Main class for the voting bot. Subclass of CoreBot. Keeps track of polls and
+  * can send info to the corresponding chats
+  */
 class VotingBot(token: String) extends CoreBot(token) {
 
   // Easier types
@@ -103,7 +101,7 @@ class VotingBot(token: String) extends CoreBot(token) {
 
         val s: SendPoll = SendPoll(
           chatId,
-          ("The poll of the day" + _date),
+          ("The poll: " + _date),
           _poll.getPollOptions().keys.toArray
         )
 

@@ -1,4 +1,10 @@
-target/
+target/test-reports
+target/bg-jobs
+target/global-logging
+target/other
+target/streams
+target/task-temp-directory
+target/test-reports 
 .bloop
 .metals
 .vscode

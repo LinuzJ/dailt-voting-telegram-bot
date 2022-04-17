@@ -7,6 +7,8 @@ import java.util.TimerTask
 import java.util.Timer
 import java.util.Calendar
 import java.text.SimpleDateFormat
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 object Main extends App {
 
@@ -42,9 +44,11 @@ object Main extends App {
   )
 
   val eol = bot.run()
-  println("Press ENTER to shutdown the bot")
-  scala.io.StdIn.readLine()
-  timer.cancel()
-  bot.shutdown()
+  println("Started")
+  sys.addShutdownHook(() => {
+    timer.cancel()
+    bot.shutdown()
+  })
+  Await.result(eol, Duration.Inf)
 
 }

@@ -1,12 +1,11 @@
 FROM openjdk:11
 
-ENV SBT_VERSION 1.6.1
+ARG TELEGRAM_TOKEN_ARG
 
-RUN curl -L -o sbt-$SBT_VERSION.zip https://github.com/sbt/sbt/releases/download/v1.6.1/sbt-$SBT_VERSION.zip
-RUN unzip sbt-$SBT_VERSION.zip -d ops
+ENV token=$TELEGRAM_TOKEN_ARG
 
 WORKDIR /voting_bot
 
-COPY . /voting_bot
+COPY ./target/scala-2.13/votingBotExe.jar /voting_bot/votingBotExe.jar
 
-CMD /ops/sbt/bin/sbt run
+CMD TELEGRAM_TOKEN=$token java -jar votingBotExe.jar

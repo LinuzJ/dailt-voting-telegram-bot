@@ -11,6 +11,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+import java.time.Duration
+import scala.jdk.DurationConverters._
 
 object Func {
 
@@ -51,12 +53,14 @@ object Func {
       chat._2.foreach(poll =>
         poll._2
           .getPollOptions()
-          .zipWithIndex
           .foreach(option => {
-            b.replyToMessage(
-              s"Option ${option._2 + 1}",
-              chat._1,
-              option._1._2._2
+            Await.result(
+              b.replyToMessage(
+                s"Option submitted by ${option._2._3.get.username.getOrElse("Unknown User!")}",
+                chat._1,
+                option._2._2
+              ),
+              Duration.ofSeconds(20).toScala
             )
           })
       )

@@ -52,23 +52,25 @@ abstract class CoreBot(val token: String)
       text: String,
       chatId: ChatId,
       replyToMessageId: Int
-  ): Unit = {
+  ): Future[Unit] = {
     chatId match {
       case id: ChatId => {
-        request(
-          SendMessage(
-            id,
-            text,
-            None,
-            None,
-            None,
-            None,
-            None,
-            Some(replyToMessageId)
+        Future {
+          request(
+            SendMessage(
+              id,
+              text,
+              None,
+              None,
+              None,
+              None,
+              None,
+              Some(replyToMessageId)
+            )
           )
-        )
+        }
       }
-      case _ => println("No chat Id..")
+      case _ => Future { println("No chat Id..") }
     }
   }
 }

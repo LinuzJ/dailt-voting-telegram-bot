@@ -5,6 +5,7 @@ import com.bot4s.telegram.models.Poll
 import com.bot4s.telegram.models.ChatId
 import com.bot4s.telegram.models.PollOption
 import simulacrum.op
+import com.bot4s.telegram.models.User
 
 /** Class for a Poll. Keeping track of votes and data.
   *
@@ -18,13 +19,14 @@ import simulacrum.op
 class PollData(val id: Int, name: String, val chatId: ChatId) {
 
   private val pollName: String = name
-  private var options: Map[String, (Int, Int)] = Map[String, (Int, Int)]()
+  private var options: Map[String, (Int, Int, Option[User])] =
+    Map[String, (Int, Int, Option[User])]() // (Text -> (votes, msgId, usr))
   private var pollMsgId: Option[Int] = None
   private var results: Map[String, Int] = Map[String, Int]()
 
   var isFinished: Boolean = false
 
-  def getPollOptions(): Map[String, (Int, Int)] = options
+  def getPollOptions(): Map[String, (Int, Int, Option[User])] = options
   def getPollName(): String = name
   def getPollId(): Int = id
   def getPollMsg(): Int = pollMsgId.getOrElse(0)
@@ -45,13 +47,13 @@ class PollData(val id: Int, name: String, val chatId: ChatId) {
   }
   def setFinished(): Unit = isFinished = true
 
-  def addOption(option: String, msgId: Int): String = {
+  def addOption(option: String, msgId: Int, usr: Option[User]): String = {
     if (option.length > 20) {
       return "The name is too long, please try again with a shorter name!"
     } else if (option.length < 1) {
       return "The name is too short, please try again with a longer name!"
     }
-    options = options + (option -> (0, msgId))
+    options = options + (option -> (0, msgId, usr))
 
     return "Optiod added!"
   }

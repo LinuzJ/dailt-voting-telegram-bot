@@ -220,8 +220,11 @@ class VotingBot(token: String) extends CoreBot(token) {
             if (chats.keySet.contains(thisChatId)) {
               val latest: Int = this.findLatestPoll(thisChatId).get
               // Add option
-              re =
-                chats(thisChatId)(latest).addOption(option.get, msg.messageId)
+              re = chats(thisChatId)(latest).addOption(
+                option.get,
+                msg.messageId,
+                msg.from
+              )
 
             } else {
               re = "Init the chat first!"

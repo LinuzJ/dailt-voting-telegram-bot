@@ -46,6 +46,22 @@ object Func {
       4. Creates new polls for each chat
    */
   def timerTask(b: VotingBot, time: Int, counter: Counter): Unit = {
+
+    b.chats.foreach(chat =>
+      chat._2.foreach(poll =>
+        poll._2
+          .getPollOptions()
+          .zipWithIndex
+          .foreach(option => {
+            b.replyToMessage(
+              s"Option ${option._2 + 1}",
+              chat._1,
+              option._1._2._2
+            )
+          })
+      )
+    )
+
     val success: Boolean = b.makePolls()
 
     // Make sure everything went right before seniding polls

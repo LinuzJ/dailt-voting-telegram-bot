@@ -47,4 +47,28 @@ abstract class CoreBot(val token: String)
       case _ => println("No chat Id..")
     }
   }
+
+  def replyToMessage(
+      text: String,
+      chatId: ChatId,
+      replyToMessageId: Int
+  ): Unit = {
+    chatId match {
+      case id: ChatId => {
+        request(
+          SendMessage(
+            id,
+            text,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(replyToMessageId)
+          )
+        )
+      }
+      case _ => println("No chat Id..")
+    }
+  }
 }

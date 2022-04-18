@@ -94,7 +94,7 @@ class VotingBot(token: String) extends CoreBot(token) {
   def makePoll(pollId: Int, chatId: ChatId): Future[Boolean] = {
     if (chats(chatId).exists(_._1 == pollId)) {
 
-      val _date: String = chats(chatId)(pollId).getPollDate()
+      val _date: String = chats(chatId)(pollId).getPollName()
 
       if (chats(chatId)(pollId).getPollOptions.keys.size > 1) {
         val _poll: PollData = chats(chatId)(pollId)
@@ -215,13 +215,14 @@ class VotingBot(token: String) extends CoreBot(token) {
           val option: Option[String] = Some(args.mkString(" "))
           val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
           var re: String = "Error, please try again!"
+
           if (option.isDefined) {
             if (chats.keySet.contains(thisChatId)) {
               val latest: Int = this.findLatestPoll(thisChatId).get
               // Add option
-              chats(thisChatId)(latest).addOption(option.get)
+              re =
+                chats(thisChatId)(latest).addOption(option.get, msg.messageId)
 
-              re = "Optiod added!"
             } else {
               re = "Init the chat first!"
             }
@@ -259,7 +260,7 @@ class VotingBot(token: String) extends CoreBot(token) {
         SendMessage(
           thisChatId,
           (for (poll <- chats(thisChatId).map(_._2)) yield {
-            var re: String = poll.getPollDate()
+            var re: String = poll.getPollName()
             poll.getResults().foreach(x => re = re + " " + x._1 + ": " + x._2)
             re
           }).mkString("\n"),

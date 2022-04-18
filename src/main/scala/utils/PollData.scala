@@ -10,22 +10,22 @@ import simulacrum.op
   *
   * @param id
   *   PollId. Used to track Polls.
-  * @param date
-  *   The name of this poll. Usually the date
+  * @param name
+  *   The name of this poll.
   * @param chatId
   *   The chatId in which this Poll is initiated
   */
-class PollData(val id: Int, date: String, val chatId: ChatId) {
+class PollData(val id: Int, name: String, val chatId: ChatId) {
 
-  private val pollDate: String = date
-  private var options: Map[String, Int] = Map[String, Int]()
+  private val pollName: String = name
+  private var options: Map[String, (Int, Int)] = Map[String, (Int, Int)]()
   private var pollMsgId: Option[Int] = None
   private var results: Map[String, Int] = Map[String, Int]()
 
   var isFinished: Boolean = false
 
-  def getPollOptions(): Map[String, Int] = options
-  def getPollDate(): String = date
+  def getPollOptions(): Map[String, (Int, Int)] = options
+  def getPollName(): String = name
   def getPollId(): Int = id
   def getPollMsg(): Int = pollMsgId.getOrElse(0)
   def getResults(): Map[String, Int] = results
@@ -45,24 +45,15 @@ class PollData(val id: Int, date: String, val chatId: ChatId) {
   }
   def setFinished(): Unit = isFinished = true
 
-  def vote(name: String): Option[String] = {
-    if (!options.keys.exists(_ == name)) {
-      return Some("This option does not exist.")
+  def addOption(option: String, msgId: Int): String = {
+    if (option.length > 20) {
+      return "The name is too long, please try again with a shorter name!"
+    } else if (option.length < 1) {
+      return "The name is too short, please try again with a longer name!"
     }
-    options(name) = options(name) + 1
-    return None
-  }
+    options = options + (option -> (0, msgId))
 
-  def addOption(name: String): Option[String] = {
-    if (name.length > 20) {
-      return Some("The name is too long, please try again with a shorter name!")
-    } else if (name.length < 1) {
-      return Some("The name is too short, please try again with a longer name!")
-    }
-
-    options = options + (name -> 0)
-
-    return None
+    return "Optiod added!"
   }
 
   def deleteOption(name: String): Option[String] = {
@@ -76,7 +67,7 @@ class PollData(val id: Int, date: String, val chatId: ChatId) {
   }
 
   def representation(): String = {
-    var res: String = pollDate + ":\n"
+    var res: String = pollName + ":\n"
     results.foreach(option => {
       res = res + s"  ${option._1} -> ${option._2}\n"
     })

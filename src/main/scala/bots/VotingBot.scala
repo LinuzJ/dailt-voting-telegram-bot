@@ -42,7 +42,7 @@ class VotingBot(token: String) extends CoreBot(token) {
     chats(chatId)(id) = new PollData(id, date, chatId)
   }
 
-  def makePolls(): Boolean = {
+  def makePolls(): Future[List[(Boolean, ChatId)]] = {
     // Latest pollId for each chatId
     var grouped: scala.collection.immutable.Map[ChatId, Int] = this.chats
       .groupBy(_._1)
@@ -73,22 +73,23 @@ class VotingBot(token: String) extends CoreBot(token) {
         })
         .toList
     }
-
-    f onComplete {
-      case Success(sentChats) => {
-        if (sentChats.forall(_._1)) {
-          return true
-        } else {
-          println(
-            "An error has occurred in chat: " + sentChats.filter(!_._1).head._2
-          )
-          return true
-        }
-      }
-      case Failure(t) =>
-        println("An error has occurred: " + t.getMessage); return false
-    }
-    true
+    
+    return f
+    // f onComplete {
+    //   case Success(sentChats) => {
+    //     if (sentChats.forall(_._1)) {
+    //       return true
+    //     } else {
+    //       println(
+    //         "An error has occurred in chat: " + sentChats.filter(!_._1).head._2
+    //       )
+    //       return true
+    //     }
+    //   }
+    //   case Failure(t) =>
+    //     println("An error has occurred: " + t.getMessage); return false
+    // }
+    // true
   }
 
   def makePoll(pollId: Int, chatId: ChatId): Future[Boolean] = {

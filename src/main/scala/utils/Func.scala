@@ -2,6 +2,7 @@ package utils
 
 import bots.VotingBot
 import utils.Counter
+import tasks.ScheduledTasks
 
 import scala.collection.mutable.Buffer
 import scala.concurrent.{Future, Await}
@@ -11,11 +12,9 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import scala.concurrent._
 import ExecutionContext.Implicits.global
-import java.time.Duration
-import scala.jdk.DurationConverters._
+import scala.concurrent.duration.Duration
 
 object Func {
-
   /*
     Simple function to get current date in specific format
    */
@@ -49,72 +48,25 @@ object Func {
    */
   def timerTask(b: VotingBot, time: Int, counter: Counter): Unit = {
 
-    b.chats.foreach(chat =>
-      chat._2.foreach(poll =>
-        poll._2
-          .getPollOptions()
-          .foreach(option => {
-            Await.result(
-              b.replyToMessage(
-                s"Option submitted by ${option._2._3.get.username.getOrElse("Unknown User!")}",
-                chat._1,
-                option._2._2
-              ),
-              Duration.ofSeconds(20).toScala
-            )
-          })
+    Await.ready(ScheduledTasks.sendReplies(b), Duration.Inf)
+
+    val polls = Await.result(b.makePolls(), Duration.Inf)
+
+    if (!polls.forall(_._1)) {
+      println(
+        "An error has occurred in chat: " + polls.filter(!_._1).head._2
       )
-    )
-
-    val success: Boolean = b.makePolls()
-
-    // Make sure everything went right before seniding polls
-    if (!success) {
-      println("Polls not successful")
     }
 
-    b.chats.foreach(x =>
-      b.sendMessage(
-        s"The poll is open!\n You have ${time}s time to answer!",
-        x._1
-      )
-    )
-    Thread.sleep((time / 2) * 1000)
-    b.chats.foreach(x =>
-      b.sendMessage(
-        s"Half of the answering time is gone!\n You have ${time / 2}s left to answer!",
-        x._1
-      )
-    )
-    Thread.sleep((time / 4) * 1000)
-    b.chats.foreach(x =>
-      b.sendMessage(
-        s"Only 1/4 of the answering time left!\n You have ${time / 4}s left to answer!",
-        x._1
-      )
-    )
+    Await.ready(ScheduledTasks.sentCountdown(b, time), Duration.Inf)
 
-    Thread.sleep((time / 4) * 1000)
-    b.chats.foreach(x =>
-      b.sendMessage(
-        s"Time is up!",
-        x._1
-      )
-    )
-
-    // Stop the current poll
-    val fStops: Future[Buffer[Option[String]]] = b.stopPolls()
-
-    fStops onComplete {
-      case Success(list) => {
-        for (err <- list) {
-          if (err.isDefined) { println(err.get) }
+    Await
+      .result(b.stopPolls(), Duration.Inf)
+      .foreach(err => {
+        if (err.isDefined) {
+          print(err.get)
         }
-      }
-      case Failure(t) => {
-        println("An error has occurred: " + t.getMessage);
-      }
-    }
+      })
 
     println(b.chats)
 

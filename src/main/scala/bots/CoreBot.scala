@@ -33,8 +33,8 @@ abstract class CoreBot(val token: String)
   // Chats (ChatId, (PollId, Polldata))
   var chats: Map[ChatId, Map[Int, PollData]] = Map[ChatId, Map[Int, PollData]]()
 
-  def sendMessage(text: String, chatId: ChatId): Unit = {
-    chatId match {
+  def sendMessage(text: String, chatId: ChatId): Future[Unit] = {
+    Future(chatId match {
       case id: ChatId => {
         request(
           SendMessage(
@@ -45,7 +45,7 @@ abstract class CoreBot(val token: String)
         )
       }
       case _ => println("No chat Id..")
-    }
+    })
   }
 
   def replyToMessage(

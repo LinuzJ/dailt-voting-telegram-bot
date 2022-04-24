@@ -75,21 +75,6 @@ class VotingBot(token: String) extends CoreBot(token) {
     }
     
     return f
-    // f onComplete {
-    //   case Success(sentChats) => {
-    //     if (sentChats.forall(_._1)) {
-    //       return true
-    //     } else {
-    //       println(
-    //         "An error has occurred in chat: " + sentChats.filter(!_._1).head._2
-    //       )
-    //       return true
-    //     }
-    //   }
-    //   case Failure(t) =>
-    //     println("An error has occurred: " + t.getMessage); return false
-    // }
-    // true
   }
 
   def makePoll(pollId: Int, chatId: ChatId): Future[Boolean] = {

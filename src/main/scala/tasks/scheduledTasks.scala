@@ -18,7 +18,8 @@ object ScheduledTasks {
           .foreach(option => {
             Await.ready(
               b.replyToMessage(
-                s"Option submitted by ${option._2._3.get.username.getOrElse("Unknown User!")}",
+                s"Option ${option._2._1} submitted by ${option._2._3.get.username
+                  .getOrElse("Unknown User!")}",
                 chat._1,
                 option._2._2
               ),

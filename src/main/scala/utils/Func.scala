@@ -62,7 +62,8 @@ object Func {
 
     Await.ready(ScheduledTasks.sentCountdown(b, time, polls), Duration.Inf)
 
-    b.stopPolls()
+    b.stopPolls(polls)
+      .get
       .foreach(err => {
         if (err.isDefined) {
           print(err.get)
@@ -73,16 +74,20 @@ object Func {
 
     // Send out results
     b.chats.foreach(x =>
-      b.sendMessage(
-        x._2.toArray.sortBy(-_._1).head._2.representation(),
-        x._1
-      )
+      if (polls(x._1)) {
+        b.sendMessage(
+          x._2.toArray.sortBy(-_._1).head._2.representation(),
+          x._1
+        )
+      }
     )
 
     // Init new poll for each chat
     b.chats.keySet.foreach(id => {
-      counter.increment()
-      b.newPoll(id, counter.getCounter(), counter.getCounter().toString())
+      if (polls(id)) {
+        counter.increment()
+        b.newPoll(id, counter.getCounter(), counter.getCounter().toString())
+      }
     })
   }
 

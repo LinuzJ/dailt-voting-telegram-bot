@@ -157,26 +157,35 @@ class VotingBot(token: String) extends CoreBot(token) {
     return f.map(_ => errorMessage)
   }
 
-  def stopPolls(): Buffer[Option[String]] = {
+  def stopPolls(
+      chatOpen: Map[ChatId, Boolean]
+  ): Option[Buffer[Option[String]]] = {
     var errorList: Buffer[Option[String]] = Buffer[Option[String]]()
 
     for ((chatId, poll) <- chats) {
-      for ((pollId, polldata) <- poll) {
-        val s: StopPoll = StopPoll(chatId, Some(polldata.getPollMsg()))
+      if (chatOpen(chatId)) {
+        val pollToClose = poll.toArray.maxBy(_._1)
+        val pollData: PollData = pollToClose._2
+
+        val s: StopPoll = StopPoll(chatId, Some(pollData.getPollMsg()))
 
         val fErr: Option[String] =
-          Await.result(stopPollAndUpdateData(chatId, pollId, s), Duration.Inf)
+          Await.result(
+            stopPollAndUpdateData(chatId, pollToClose._1, s),
+            Duration.Inf
+          )
 
         fErr match {
           case e: Option[String] => errorList += e
           case _ =>
             errorList += Some(
-              s"Error while adding data to ${pollId} in chat ${chatId}"
+              s"Error while adding data to ${pollToClose._1} in chat ${chatId}"
             )
         }
+
       }
     }
-    errorList
+    Some(errorList)
   }
 
   def findLatestPoll(chatId: ChatId): Option[Int] = {
@@ -299,7 +308,7 @@ class VotingBot(token: String) extends CoreBot(token) {
       request(
         SendMessage(
           ChatId.fromChat(msg.chat.id),
-          "Here are the availible commands:\n - /help\n - /init\n - /addOption\n - /data\n - /kill",
+          "Here are the availible commands:\n - /help\n - /init\n - /addOption\n - /data\n",
           parseMode = Some(ParseMode.HTML)
         )
       ).map(_ => ())

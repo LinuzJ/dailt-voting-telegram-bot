@@ -15,7 +15,6 @@ object ScheduledTasks {
   ): Future[Unit] = {
     Future(
       b.chats.foreach(chat => {
-
         chat._2.toArray
           .maxBy(_._1)
           ._2
@@ -23,7 +22,7 @@ object ScheduledTasks {
           .foreach(option => {
             Await.ready(
               b.replyToMessage(
-                s"Option ${option._2._1} submitted by ${option._2._3.get.username
+                s"Option ${option._2._2} submitted by ${option._2._3.get.username
                   .getOrElse("Unknown User!")}",
                 chat._1,
                 option._2._2

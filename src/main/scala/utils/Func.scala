@@ -4,6 +4,7 @@ import bots.VotingBot
 import utils.Counter
 import tasks.ScheduledTasks
 
+import scala.collection.mutable.Map
 import scala.collection.mutable.Buffer
 import scala.concurrent.{Future, Await}
 import scala.util.{Failure, Success, Try}
@@ -13,6 +14,7 @@ import java.util.Calendar
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
+import com.bot4s.telegram.models.ChatId
 
 object Func {
   /*
@@ -50,18 +52,17 @@ object Func {
 
     Await.ready(ScheduledTasks.sendReplies(b), Duration.Inf)
 
-    val polls = Await.result(b.makePolls(), Duration.Inf)
+    val polls: Map[ChatId, Boolean] = b.makePolls()
 
-    if (!polls.forall(_._1)) {
+    if (!polls.forall(_._2)) {
       println(
-        "An error has occurred in chat: " + polls.filter(!_._1).head._2
+        "An error has occurred in chat: " + polls.filter(!_._2).head._1
       )
     }
 
-    Await.ready(ScheduledTasks.sentCountdown(b, time), Duration.Inf)
+    Await.ready(ScheduledTasks.sentCountdown(b, time, polls), Duration.Inf)
 
-    Await
-      .result(b.stopPolls(), Duration.Inf)
+    b.stopPolls()
       .foreach(err => {
         if (err.isDefined) {
           print(err.get)

@@ -42,8 +42,8 @@ class VotingBot(token: String) extends CoreBot(token) {
     chats(chatId)(id) = new PollData(id, date, chatId)
   }
 
-  def makePolls(): Future[List[(Boolean, ChatId)]] = {
-    // Latest pollId for each chatId
+  def makePolls(): Map[ChatId, Boolean] = {
+    // Latest pollId for each chatId in the form Map(ChatId -> PollId)
     var grouped: scala.collection.immutable.Map[ChatId, Int] = this.chats
       .groupBy(_._1)
       .map(x =>
@@ -57,62 +57,21 @@ class VotingBot(token: String) extends CoreBot(token) {
         )
       )
 
-    val f: Future[List[(Boolean, ChatId)]] = Future {
-      grouped
-        .map(x => {
-          var re: (Boolean, ChatId) = (true, x._1)
-          val f_sendPoll: Future[Boolean] = this.makePoll(x._2, x._1)
-          f_sendPoll onComplete {
-            case Success(bool) => re = (true, x._1)
-            case Failure(t) => {
-              println("An error has occurred: " + t.getMessage);
-              re = (false, x._1)
-            }
-          }
-          re
-        })
-        .toList
-    }
-    
-    return f
+    grouped
+      .map(x => {
+        val f_res: Boolean =
+          Await.result(this.makePoll(x._2, x._1), Duration.Inf)
+
+        (x._1 -> f_res)
+      })
+      .to(collection.mutable.Map)
   }
 
   def makePoll(pollId: Int, chatId: ChatId): Future[Boolean] = {
-    if (chats(chatId).exists(_._1 == pollId)) {
 
-      val _date: String = chats(chatId)(pollId).getPollName()
-
-      if (chats(chatId)(pollId).getPollOptions.keys.size > 1) {
-        val _poll: PollData = chats(chatId)(pollId)
-
-        val s: SendPoll = SendPoll(
-          chatId,
-          ("The poll: " + _date),
-          _poll.getPollOptions().keys.toArray
-        )
-
-        sendPoll(s, chatId, pollId)
-        Future(true)
-      } else if (chats(chatId)(pollId).getPollOptions.keys.size == 1) {
-        request(
-          SendMessage(
-            chatId,
-            "There is only one option for this poll, please add another one",
-            parseMode = Some(ParseMode.HTML)
-          )
-        ).map(_ => (false))
-      } else {
-        request(
-          SendMessage(
-            chatId,
-            "There are no poll options for this poll..",
-            parseMode = Some(ParseMode.HTML)
-          )
-        ).map(_ => (false))
-      }
-
-    } else {
-      request(
+    // Check if there actually is a poll with this ID
+    if (!chats(chatId).exists(_._1 == pollId)) {
+      return request(
         SendMessage(
           chatId,
           "There are no poll for this date..",
@@ -120,20 +79,51 @@ class VotingBot(token: String) extends CoreBot(token) {
         )
       ).map(_ => (false))
     }
+
+    val _name: String = chats(chatId)(pollId).getPollName()
+
+    if (chats(chatId)(pollId).getPollOptions.keys.size > 1) {
+      val _poll: PollData = chats(chatId)(pollId)
+
+      val s: SendPoll = SendPoll(
+        chatId,
+        ("The poll: " + _name),
+        _poll.getPollOptions().keys.toArray
+      )
+
+      sendPoll(s, chatId, pollId)
+      Future(true)
+    } else if (chats(chatId)(pollId).getPollOptions.keys.size == 1) {
+      request(
+        SendMessage(
+          chatId,
+          "There is only one option for this poll, please add another one",
+          parseMode = Some(ParseMode.HTML)
+        )
+      ).map(_ => (false))
+    } else {
+      request(
+        SendMessage(
+          chatId,
+          "There are no poll options for this poll..",
+          parseMode = Some(ParseMode.HTML)
+        )
+      ).map(_ => (false))
+    }
   }
 
-  def sendPoll(_poll: SendPoll, chatId: ChatId, pollId: Int): Future[Unit] = {
+  def sendPoll(_poll: SendPoll, chatId: ChatId, pollId: Int): Unit = {
     val f: Future[Message] = request(
       _poll
     )
     println("Sending poll")
-    f.onComplete {
-      case Success(t) => chats(chatId)(pollId).setPollMsg(t.messageId)
-      case Failure(e) => println("Error " + e)
+    val f_res = Await.result(f, Duration.Inf)
+
+    f_res match {
+      case m: Message   => chats(chatId)(pollId).setPollMsg(m.messageId)
+      case e: Throwable => println("Error " + e)
     }
     println("Poll Sent!")
-
-    Future()
   }
 
   def stopPollAndUpdateData(
@@ -167,27 +157,26 @@ class VotingBot(token: String) extends CoreBot(token) {
     return f.map(_ => errorMessage)
   }
 
-  def stopPolls(): Future[Buffer[Option[String]]] = {
+  def stopPolls(): Buffer[Option[String]] = {
     var errorList: Buffer[Option[String]] = Buffer[Option[String]]()
 
     for ((chatId, poll) <- chats) {
       for ((pollId, polldata) <- poll) {
         val s: StopPoll = StopPoll(chatId, Some(polldata.getPollMsg()))
 
-        val fErr: Future[Option[String]] =
-          stopPollAndUpdateData(chatId, pollId, s)
+        val fErr: Option[String] =
+          Await.result(stopPollAndUpdateData(chatId, pollId, s), Duration.Inf)
 
-        fErr onComplete {
-          case Success(e) => errorList += e
-          case Failure(t) =>
+        fErr match {
+          case e: Option[String] => errorList += e
+          case _ =>
             errorList += Some(
               s"Error while adding data to ${pollId} in chat ${chatId}"
             )
         }
-
       }
     }
-    Future { errorList }
+    errorList
   }
 
   def findLatestPoll(chatId: ChatId): Option[Int] = {

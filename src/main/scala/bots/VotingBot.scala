@@ -22,6 +22,7 @@ import com.bot4s.telegram.models.{
 import simulacrum.op
 import java.text.SimpleDateFormat
 import java.util.Calendar;
+import utils.ChatEntity
 
 /** @param token
   *   Bot's token.
@@ -38,35 +39,44 @@ class VotingBot(token: String) extends CoreBot(token) {
 
   private var mostRecentPollMessageId: Int = _
 
-  def newPoll(chatId: ChatId, id: Int, date: String): Unit = {
-    chats(chatId)(id) = new PollData(id, date, chatId)
+  def newPoll(chatId: ChatId, pollId: Int, date: String): Unit = {
+    val data: PollData = new PollData(pollId, date, chatId)
+    this.getChat(chatId).get.addPoll(pollId, data)
   }
 
-  def findValidPolls(): Map[ChatId, Boolean] = {
-    for ((chatId, poll) <- chats) yield {
-      val mostRecetPoll: (Int, PollData) = poll.maxBy(_._1)
+  def findValidPolls(): Map[ChatId, Boolean] = chats
+    .map(c => {
+      val mostRecetPoll: (Int, PollData) = c.getLatestPoll()
       val isValid: Boolean = mostRecetPoll._2.getPollOptions().size > 1
-      (chatId -> isValid)
-    }
-  }
+      (c.getId() -> isValid)
+    })
+    .to(collection.mutable.Map)
 
-  def makePoll(pollId: Int, chatId: ChatId): Unit = {
+  def makePoll(pollId: Int, chatId: ChatId): Future[Unit] = Future {
 
-    val _name: String = chats(chatId)(pollId).getPollName()
+    val _name: String =
+      this.getChat(chatId).get.getPoll(pollId).get.getPollName()
 
-    if (chats(chatId)(pollId).getPollOptions.keys.size > 1) {
-      val _poll: PollData = chats(chatId)(pollId)
+    if (
+      this.getChat(chatId).get.getPoll(pollId).get.getPollOptions.keys.size > 1
+    ) {
+      val _poll: PollData = this.getChat(chatId).get.getPoll(pollId).get
 
       sendPoll(_poll.getPollOptions().keys.toArray, _name, chatId, pollId)
 
-    } else if (chats(chatId)(pollId).getPollOptions.keys.size == 1) {
-      request(
-        SendMessage(
-          chatId,
-          "There is only one option for this poll, please add another one",
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => ())
+    } else if (
+      this.getChat(chatId).get.getPoll(pollId).get.getPollOptions.keys.size == 1
+    ) {
+      Await.ready(
+        request(
+          SendMessage(
+            chatId,
+            "There is only one option for this poll, please add another one",
+            parseMode = Some(ParseMode.HTML)
+          )
+        ).map(_ => ()),
+        Duration.Inf
+      )
     }
   }
 
@@ -87,7 +97,8 @@ class VotingBot(token: String) extends CoreBot(token) {
     val f_res = Await.result(f, Duration.Inf)
 
     f_res match {
-      case m: Message   => chats(chatId)(pollId).setPollMsg(m.messageId)
+      case m: Message =>
+        this.getChat(chatId).get.getPoll(pollId).get.setPollMsg(m.messageId)
       case e: Throwable => println("Error " + e)
     }
     println("Poll Sent!")
@@ -109,8 +120,8 @@ class VotingBot(token: String) extends CoreBot(token) {
       case Success(t) => {
         t match {
           case a: Poll => {
-            chats(chatId)(pollId).setResult(a, a.options)
-            chats(chatId)(pollId).setFinished()
+            this.getChat(chatId).get.getPoll(pollId).get.setResult(a, a.options)
+            this.getChat(chatId).get.getPoll(pollId).get.setFinished()
           }
           case _ =>
             errorMessage = Some(
@@ -149,23 +160,20 @@ class VotingBot(token: String) extends CoreBot(token) {
     Some(errorList)
   }
 
-  def findLatestPoll(chatId: ChatId): Option[Int] = {
-    Some(chats(chatId).keys.max)
-  }
-
   onCommand("addOption") { implicit msg =>
     {
       withArgs { args =>
         {
           val option: Option[String] = Some(args.mkString(" "))
-          val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
+          val chatId: ChatId = ChatId.fromChat(msg.chat.id)
           var re: String = "Error, please try again!"
 
           if (option.isDefined) {
-            if (chats.keySet.contains(thisChatId)) {
-              val latest: Int = this.findLatestPoll(thisChatId).get
+            if (chats.exists(_.is(chatId))) {
+              val latest: (Int, PollData) =
+                this.getChat(chatId).get.getLatestPoll()
               // Add option
-              re = chats(thisChatId)(latest).addOption(
+              re = latest._2.addOption(
                 option.get,
                 msg.messageId,
                 msg.from
@@ -177,7 +185,7 @@ class VotingBot(token: String) extends CoreBot(token) {
           }
           request(
             SendMessage(
-              thisChatId,
+              chatId,
               re,
               parseMode = Some(ParseMode.HTML)
             )
@@ -187,29 +195,17 @@ class VotingBot(token: String) extends CoreBot(token) {
     }
   }
 
-  onCommand("viewPolls") { implicit msg =>
-    {
-      request(
-        SendMessage(
-          ChatId.fromChat(msg.chat.id),
-          (for (poll <- chats(ChatId.fromChat(msg.chat.id)).map(_._2)) yield {
-            poll.representation()
-          }).mkString("\n"),
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => ())
-    }
-  }
-
   onCommand("data") { implicit msg =>
     {
       val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
       request(
         SendMessage(
           thisChatId,
-          (for (poll <- chats(thisChatId).map(_._2)) yield {
-            var re: String = poll.getPollName()
-            poll.getResults().foreach(x => re = re + " " + x._1 + ": " + x._2)
+          (for (poll <- this.getChat(thisChatId).get.getPolls()) yield {
+            var re: String = poll._2.getPollName()
+            poll._2
+              .getResults()
+              .foreach(x => re = re + " " + x._1 + ": " + x._2)
             re
           }).mkString("\n"),
           parseMode = Some(ParseMode.HTML)
@@ -227,10 +223,11 @@ class VotingBot(token: String) extends CoreBot(token) {
     // Recognize chatId
     mostRecentChatId = Some(curChatId)
 
-    if (!chats.keySet.contains(curChatId)) {
-      chats(curChatId) = Map[Int, PollData]()
+    if (!chats.exists(_.is(curChatId))) {
 
-      this.newPoll(chats.head._1, -1, "init")
+      chats += new ChatEntity(curChatId)
+
+      this.newPoll(curChatId, -1, "init")
 
       request(
         SendMessage(
@@ -248,20 +245,38 @@ class VotingBot(token: String) extends CoreBot(token) {
         )
       ).map(_ => ())
     }
+  }
 
+  onCommand("initAdmin") { implicit msg =>
+    val cand: User = msg.from.get
+    val chatId: ChatId = msg.chat.chatId
+
+    if (this.getAdmin().isDefined) {
+      request(
+        SendMessage(
+          chatId,
+          "Admin already setup..",
+          parseMode = Some(ParseMode.HTML)
+        )
+      ).map(_ => ())
+    } else {
+      // set admin
+      this.setAdmin(cand)
+
+      request(
+        SendMessage(
+          chatId,
+          "Admin setup..",
+          parseMode = Some(ParseMode.HTML)
+        )
+      ).map(_ => ())
+    }
   }
 
   onCommand("kill") { implicit msg =>
-    request(
-      SendMessage(
-        ChatId.fromChat(msg.chat.id), {
-          println("Shutting down")
-          System.exit(0)
-          "Quitting"
-        },
-        parseMode = Some(ParseMode.HTML)
-      )
-    ).map(_ => ())
+    println("Shutting down")
+    System.exit(0)
+    Future()
   }
 
   onCommand("help") { implicit msg =>

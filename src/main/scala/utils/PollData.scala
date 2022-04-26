@@ -48,14 +48,14 @@ class PollData(val id: Int, name: String, val chatId: ChatId) {
   def setFinished(): Unit = isFinished = true
 
   def addOption(option: String, msgId: Int, usr: Option[User]): String = {
-    if (option.length > 20) {
+    if (option.length > 40) {
       return "The name is too long, please try again with a shorter name!"
     } else if (option.length < 1) {
       return "The name is too short, please try again with a longer name!"
     }
     options = options + (option -> (0, msgId, usr))
 
-    return "Optiod added!"
+    return "Option added!"
   }
 
   def deleteOption(name: String): Option[String] = {

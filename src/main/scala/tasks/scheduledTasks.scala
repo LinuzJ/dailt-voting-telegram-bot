@@ -18,15 +18,15 @@ object ScheduledTasks {
   ): Future[ChatId] = {
     Future {
 
-      val pollId: Int = b.chats(chatId).maxBy(_._1)._1
+      val pollId: Int = b.getChat(chatId).head.getLatestPoll()._1
 
-      sendReplies(b, chatId, pollId)
+      Await.result(sendReplies(b, chatId, pollId), Duration.Inf)
 
-      b.makePoll(pollId, chatId)
+      Await.result(b.makePoll(pollId, chatId), Duration.Inf)
 
       sentCountdown(b, time, chatId)
 
-      b.stopPolls(chatId, pollId, b.chats(chatId)(pollId))
+      b.stopPolls(chatId, pollId, b.getChat(chatId).get.getPoll(pollId).get)
         .get
         .foreach(err => {
           if (err.isDefined) {
@@ -38,7 +38,7 @@ object ScheduledTasks {
 
       // Send out results
       b.sendMessage(
-        b.chats(chatId)(pollId).representation(),
+        b.getChat(chatId).get.getPoll(pollId).get.representation(),
         chatId
       )
 
@@ -54,20 +54,25 @@ object ScheduledTasks {
       b: VotingBot,
       chatId: ChatId,
       pollId: Int
-  ): Unit = {
-    b.chats(chatId)(pollId)
-      .getPollOptions()
-      .foreach(option => {
-        Await.ready(
-          b.replyToMessage(
-            s"Option ${option._2._2} submitted by ${option._2._3.get.username
-              .getOrElse("Unknown User!")}",
-            chatId,
-            option._2._2
-          ),
-          Duration.Inf
-        )
-      })
+  ): Future[Unit] = {
+    Future {
+      b.getChat(chatId)
+        .get
+        .getPoll(pollId)
+        .get
+        .getPollOptions()
+        .foreach(option => {
+          Await.result(
+            b.replyToMessage(
+              s"Option ${option._2._2} submitted by ${option._2._3.get.username
+                .getOrElse("Unknown User!")}",
+              chatId,
+              option._2._2
+            ),
+            Duration.Inf
+          )
+        })
+    }
   }
 
   def sentCountdown(
@@ -84,15 +89,6 @@ object ScheduledTasks {
     )
 
     Thread.sleep((time / 2) * 1000)
-
-    Await.ready(
-      b.sendMessage(
-        s"Half of the answering time is gone!\n You have ${time / 2}s left to answer!",
-        chatId
-      ),
-      Duration.Inf
-    )
-
     Thread.sleep((time / 4) * 1000)
 
     Await.ready(

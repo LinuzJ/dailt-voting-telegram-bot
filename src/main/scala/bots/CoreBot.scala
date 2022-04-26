@@ -12,6 +12,9 @@ import com.bot4s.telegram.models.ChatId
 import com.bot4s.telegram.methods.{SendMessage, _}
 import java.util.concurrent.TimeUnit
 import scala.collection.mutable.Map
+import utils.ChatEntity
+import scala.collection.mutable.ArrayBuffer
+import com.bot4s.telegram.models.User
 
 /** Core class for the bot
   *
@@ -27,11 +30,25 @@ abstract class CoreBot(val token: String)
 
   override val client: RequestHandler[Future] = new ScalajHttpClient(token)
 
+  // Admin
+  private var admin: Option[User] = None
+
+  def getAdmin(): Option[User] = admin
+  def setAdmin(u: User) = admin = Some(u)
+
   // Tracking chatIds
   var mostRecentChatId: Option[ChatId] = None
 
   // Chats (ChatId, (PollId, Polldata))
-  var chats: Map[ChatId, Map[Int, PollData]] = Map[ChatId, Map[Int, PollData]]()
+  var chats: ArrayBuffer[ChatEntity] = ArrayBuffer[ChatEntity]()
+
+  def getChat(chatId: ChatId): Option[ChatEntity] = {
+    val filt = chats.filter(_.is(chatId))
+
+    if (filt.isEmpty) return None
+
+    Some(filt.head)
+  }
 
   def sendMessage(text: String, chatId: ChatId): Future[Unit] = {
     Future(chatId match {

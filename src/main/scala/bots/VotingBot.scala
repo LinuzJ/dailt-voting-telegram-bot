@@ -42,57 +42,23 @@ class VotingBot(token: String) extends CoreBot(token) {
     chats(chatId)(id) = new PollData(id, date, chatId)
   }
 
-  def makePolls(): Map[ChatId, Boolean] = {
-    // Latest pollId for each chatId in the form Map(ChatId -> PollId)
-    var grouped: scala.collection.immutable.Map[ChatId, Int] = this.chats
-      .groupBy(_._1)
-      .map(x =>
-        (
-          x._1,
-          x._2.toArray
-            .map(_._2.values)
-            .flatten
-            .maxBy(_.getPollId())
-            .getPollId()
-        )
-      )
-
-    grouped
-      .map(x => {
-        val f_res: Boolean =
-          Await.result(this.makePoll(x._2, x._1), Duration.Inf)
-
-        (x._1 -> f_res)
-      })
-      .to(collection.mutable.Map)
+  def findValidPolls(): Map[ChatId, Boolean] = {
+    for ((chatId, poll) <- chats) yield {
+      val mostRecetPoll: (Int, PollData) = poll.maxBy(_._1)
+      val isValid: Boolean = mostRecetPoll._2.getPollOptions().size > 1
+      (chatId -> isValid)
+    }
   }
 
-  def makePoll(pollId: Int, chatId: ChatId): Future[Boolean] = {
-
-    // Check if there actually is a poll with this ID
-    if (!chats(chatId).exists(_._1 == pollId)) {
-      return request(
-        SendMessage(
-          chatId,
-          "There are no poll for this date..",
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => (false))
-    }
+  def makePoll(pollId: Int, chatId: ChatId): Unit = {
 
     val _name: String = chats(chatId)(pollId).getPollName()
 
     if (chats(chatId)(pollId).getPollOptions.keys.size > 1) {
       val _poll: PollData = chats(chatId)(pollId)
 
-      val s: SendPoll = SendPoll(
-        chatId,
-        ("The poll: " + _name),
-        _poll.getPollOptions().keys.toArray
-      )
+      sendPoll(_poll.getPollOptions().keys.toArray, _name, chatId, pollId)
 
-      sendPoll(s, chatId, pollId)
-      Future(true)
     } else if (chats(chatId)(pollId).getPollOptions.keys.size == 1) {
       request(
         SendMessage(
@@ -100,21 +66,22 @@ class VotingBot(token: String) extends CoreBot(token) {
           "There is only one option for this poll, please add another one",
           parseMode = Some(ParseMode.HTML)
         )
-      ).map(_ => (false))
-    } else {
-      request(
-        SendMessage(
-          chatId,
-          "There are no poll options for this poll..",
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => (false))
+      ).map(_ => ())
     }
   }
 
-  def sendPoll(_poll: SendPoll, chatId: ChatId, pollId: Int): Unit = {
+  def sendPoll(
+      options: Array[String],
+      _name: String,
+      chatId: ChatId,
+      pollId: Int
+  ): Unit = {
     val f: Future[Message] = request(
-      _poll
+      SendPoll(
+        chatId,
+        ("The poll: " + _name),
+        options
+      )
     )
     println("Sending poll")
     val f_res = Await.result(f, Duration.Inf)
@@ -158,32 +125,26 @@ class VotingBot(token: String) extends CoreBot(token) {
   }
 
   def stopPolls(
-      chatOpen: Map[ChatId, Boolean]
+      chatId: ChatId,
+      pollId: Int,
+      pollData: PollData
   ): Option[Buffer[Option[String]]] = {
     var errorList: Buffer[Option[String]] = Buffer[Option[String]]()
 
-    for ((chatId, poll) <- chats) {
-      if (chatOpen(chatId)) {
-        val pollToClose = poll.toArray.maxBy(_._1)
-        val pollData: PollData = pollToClose._2
+    val s: StopPoll = StopPoll(chatId, Some(pollData.getPollMsg()))
 
-        val s: StopPoll = StopPoll(chatId, Some(pollData.getPollMsg()))
+    val fErr: Option[String] =
+      Await.result(
+        stopPollAndUpdateData(chatId, pollId, s),
+        Duration.Inf
+      )
 
-        val fErr: Option[String] =
-          Await.result(
-            stopPollAndUpdateData(chatId, pollToClose._1, s),
-            Duration.Inf
-          )
-
-        fErr match {
-          case e: Option[String] => errorList += e
-          case _ =>
-            errorList += Some(
-              s"Error while adding data to ${pollToClose._1} in chat ${chatId}"
-            )
-        }
-
-      }
+    fErr match {
+      case e: Option[String] => errorList += e
+      case _ =>
+        errorList += Some(
+          s"Error while adding data to ${pollId} in chat ${chatId}"
+        )
     }
     Some(errorList)
   }

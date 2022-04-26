@@ -50,45 +50,15 @@ object Func {
    */
   def timerTask(b: VotingBot, time: Int, counter: Counter): Unit = {
 
-    Await.ready(ScheduledTasks.sendReplies(b), Duration.Inf)
+    val validPolls: List[ChatId] =
+      b.findValidPolls().toList.filter(_._2).map(_._1)
 
-    val polls: Map[ChatId, Boolean] = b.makePolls()
-
-    if (!polls.forall(_._2)) {
-      println(
-        "An error has occurred in chat: " + polls.filter(!_._2).head._1
+    def futureOfList: Future[List[ChatId]] =
+      Future.traverse(validPolls)(x =>
+        ScheduledTasks.finishChat(b, x, time, counter)
       )
-    }
 
-    Await.ready(ScheduledTasks.sentCountdown(b, time, polls), Duration.Inf)
-
-    b.stopPolls(polls)
-      .get
-      .foreach(err => {
-        if (err.isDefined) {
-          print(err.get)
-        }
-      })
-
-    println(b.chats)
-
-    // Send out results
-    b.chats.foreach(x =>
-      if (polls(x._1)) {
-        b.sendMessage(
-          x._2.toArray.sortBy(-_._1).head._2.representation(),
-          x._1
-        )
-      }
-    )
-
-    // Init new poll for each chat
-    b.chats.keySet.foreach(id => {
-      if (polls(id)) {
-        counter.increment()
-        b.newPoll(id, counter.getCounter(), counter.getCounter().toString())
-      }
-    })
+    Await.result(futureOfList, Duration.Inf)
   }
 
 }

@@ -274,21 +274,25 @@ class VotingBot(token: String) extends CoreBot(token) {
   }
 
   onCommand("kill") { implicit msg =>
-    println("Shutting down")
-    System.exit(0)
-    Future()
+    val usr: User = msg.from.get
+    val chatId: ChatId = msg.chat.chatId
+
+    if (this.getAdmin().isDefined) {
+      if (this.getAdmin().get == usr) {
+        println("Shutting down")
+        System.exit(0)
+      }
+      Future()
+    } else {
+      this.sendMessage("You are not the admin..", chatId)
+    }
   }
 
   onCommand("help") { implicit msg =>
-    {
-      request(
-        SendMessage(
-          ChatId.fromChat(msg.chat.id),
-          "Here are the availible commands:\n - /help\n - /init\n - /addOption\n - /data\n",
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => ())
-    }
+    this.sendMessage(
+      "Here are the availible commands:\n - /help\n - /init\n - /addOption\n - /data\n",
+      msg.chat.chatId
+    )
   }
 
   def test(): String = "test"

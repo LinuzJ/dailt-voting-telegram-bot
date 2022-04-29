@@ -7,6 +7,8 @@ import com.bot4s.telegram.models.PollOption
 import simulacrum.op
 import com.bot4s.telegram.models.User
 import db.DBClient
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Future, Await}
 
 /** Class for a Poll. Keeping track of votes and data.
   *
@@ -19,7 +21,7 @@ import db.DBClient
   */
 class PollData(val id: Int, name: String, val chatId: ChatId, db: DBClient) {
 
-  db.run
+  Await.ready(db.addPoll(id, name), Duration.Inf)
 
   private val pollName: String = name
   private var options: Map[String, (Int, Int, Option[User])] =
@@ -39,6 +41,9 @@ class PollData(val id: Int, name: String, val chatId: ChatId, db: DBClient) {
 
   def setResult(_poll: Poll, _options: Array[PollOption]): Unit = {
     for (option <- _options) {
+
+      db.addResult(id, option.text, pollMsgId, option.voterCount)
+
       val t: String = option.text
       if (results.keys.toArray.contains(t)) {
         results(t) = results(t) + option.voterCount

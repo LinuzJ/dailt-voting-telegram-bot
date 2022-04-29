@@ -6,7 +6,6 @@ CREATE TABLE polls (
 CREATE TABLE poll_results (
 	pollId INT PRIMARY KEY,
 	option_text TEXT,
-	username TEXT,
 	msgId INT,
 	votes INT
 );

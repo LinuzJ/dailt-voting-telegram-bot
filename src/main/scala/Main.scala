@@ -43,18 +43,6 @@ object Main extends App {
   today.set(Calendar.SECOND, 0);
 
   // Schedule the polling
-  timer.schedule(
-    Func.function2TimerTask(
-      Func.timerTask,
-      bot,
-      answerPeriodTimeInSeconds,
-      counter
-    ),
-    today.getTime(),
-    TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS)
-  )
-
-  // // Schedule the polling
   // timer.schedule(
   //   Func.function2TimerTask(
   //     Func.timerTask,
@@ -62,9 +50,21 @@ object Main extends App {
   //     answerPeriodTimeInSeconds,
   //     counter
   //   ),
-  //   periodTimeInMinutes * 60 * 1000,
-  //   periodTimeInMinutes * 60 * 1000
+  //   today.getTime(),
+  //   TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS)
   // )
+
+  // Schedule the polling
+  timer.schedule(
+    Func.function2TimerTask(
+      Func.timerTask,
+      bot,
+      answerPeriodTimeInSeconds,
+      counter
+    ),
+    periodTimeInMinutes * 60 * 1000,
+    periodTimeInMinutes * 60 * 1000
+  )
 
   // Run the bot
   val eol = bot.run()

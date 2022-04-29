@@ -3,6 +3,8 @@ package bots
 import bots.CoreBot
 import utils.PollData
 import utils.Func
+import utils.ChatEntity
+import db.DBClient
 
 import scala.collection.mutable.Buffer
 import scala.concurrent.{Future, Await}
@@ -19,11 +21,9 @@ import com.bot4s.telegram.models.{
   InputFile,
   _
 }
-import simulacrum.op
+
 import java.text.SimpleDateFormat
 import java.util.Calendar;
-import utils.ChatEntity
-import db.DBClient
 import scala.collection.mutable.ArrayBuffer
 
 /** @param token
@@ -219,12 +219,33 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
   onCommand("polls") { implicit msg =>
     {
       val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
-      val r: ArrayBuffer[String] = db.run
+      val r: ArrayBuffer[(String, String, Boolean)] =
+        Await.result(db.getPolls(), Duration.Inf)
       request(
         SendMessage(
           thisChatId,
           (for (s <- r) yield {
-            s
+            s"id: ${s._1}, name: ${s._2}, finished: ${s._3}"
+          }).mkString("\n"),
+          parseMode = Some(ParseMode.HTML)
+        )
+      ).map(_ => ())
+    }
+  }
+
+  onCommand("results") { implicit msg =>
+    {
+      val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
+      val r: ArrayBuffer[(String, Int)] =
+        Await.result(
+          db.getResults(chats.filter(_.is(thisChatId)).head.getLatestPoll()._1),
+          Duration.Inf
+        )
+      request(
+        SendMessage(
+          thisChatId,
+          (for (s <- r) yield {
+            s"option: ${s._1}, votes: ${s._2}"
           }).mkString("\n"),
           parseMode = Some(ParseMode.HTML)
         )

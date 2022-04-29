@@ -11,6 +11,7 @@ import java.text.SimpleDateFormat
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
+import db.DBClient
 
 object Main extends App {
 
@@ -18,12 +19,14 @@ object Main extends App {
 
   private val key: Option[String] = sys.env.get("TELEGRAM_TOKEN")
 
+  private val dbClient = new DBClient
+
   if (!key.isDefined) {
     Console.err.println("Please provide token in env variable")
     System.exit(0)
   }
 
-  private var bot: VotingBot = new VotingBot(key.get)
+  private var bot: VotingBot = new VotingBot(key.get, dbClient)
   private val periodTimeInMinutes: Int = 1
   private val answerPeriodTimeInSeconds: Int = 120
   private val counter: Counter = new Counter

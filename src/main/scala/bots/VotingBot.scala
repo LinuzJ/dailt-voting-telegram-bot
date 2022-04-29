@@ -23,6 +23,8 @@ import simulacrum.op
 import java.text.SimpleDateFormat
 import java.util.Calendar;
 import utils.ChatEntity
+import db.DBClient
+import scala.collection.mutable.ArrayBuffer
 
 /** @param token
   *   Bot's token.
@@ -30,7 +32,7 @@ import utils.ChatEntity
   * Main class for the voting bot. Subclass of CoreBot. Keeps track of polls and
   * can send info to the corresponding chats
   */
-class VotingBot(token: String) extends CoreBot(token) {
+class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
 
   // Easier types
   type Button = InlineKeyboardButton
@@ -40,7 +42,7 @@ class VotingBot(token: String) extends CoreBot(token) {
   private var mostRecentPollMessageId: Int = _
 
   def newPoll(chatId: ChatId, pollId: Int, date: String): Unit = {
-    val data: PollData = new PollData(pollId, date, chatId)
+    val data: PollData = new PollData(pollId, date, chatId, db)
     this.getChat(chatId).get.addPoll(pollId, data)
   }
 
@@ -207,6 +209,22 @@ class VotingBot(token: String) extends CoreBot(token) {
               .getResults()
               .foreach(x => re = re + " " + x._1 + ": " + x._2)
             re
+          }).mkString("\n"),
+          parseMode = Some(ParseMode.HTML)
+        )
+      ).map(_ => ())
+    }
+  }
+
+  onCommand("polls") { implicit msg =>
+    {
+      val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
+      val r: ArrayBuffer[String] = db.run
+      request(
+        SendMessage(
+          thisChatId,
+          (for (s <- r) yield {
+            s
           }).mkString("\n"),
           parseMode = Some(ParseMode.HTML)
         )

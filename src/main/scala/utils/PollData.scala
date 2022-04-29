@@ -6,6 +6,7 @@ import com.bot4s.telegram.models.ChatId
 import com.bot4s.telegram.models.PollOption
 import simulacrum.op
 import com.bot4s.telegram.models.User
+import db.DBClient
 
 /** Class for a Poll. Keeping track of votes and data.
   *
@@ -16,7 +17,9 @@ import com.bot4s.telegram.models.User
   * @param chatId
   *   The chatId in which this Poll is initiated
   */
-class PollData(val id: Int, name: String, val chatId: ChatId) {
+class PollData(val id: Int, name: String, val chatId: ChatId, db: DBClient) {
+
+  db.run
 
   private val pollName: String = name
   private var options: Map[String, (Int, Int, Option[User])] =

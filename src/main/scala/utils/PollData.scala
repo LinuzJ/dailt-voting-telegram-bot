@@ -43,7 +43,6 @@ class PollData(val id: Int, name: String, val chatId: ChatId) {
         results(t) = option.voterCount
       }
     }
-
   }
   def setFinished(): Unit = isFinished = true
 

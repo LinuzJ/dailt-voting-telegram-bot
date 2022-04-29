@@ -11,6 +11,9 @@ libraryDependencies += "com.bot4s" %% "telegram-core" % "5.3.0"
 // Extra goodies: Webhooks, support for games, bindings for actors.
 libraryDependencies += "com.bot4s" %% "telegram-akka" % "5.3.0"
 
+// Add postgres db support
+libraryDependencies += "org.postgresql" % "postgresql" % "9.3-1102-jdbc41"
+
 lazy val root = (project in file("."))
   .settings(
     name := "voting-tg-bot",

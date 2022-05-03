@@ -26,11 +26,12 @@ import java.text.SimpleDateFormat
 import java.util.Calendar;
 import scala.collection.mutable.ArrayBuffer
 
-/** @param token
-  *   Bot's token.
-  *
-  * Main class for the voting bot. Subclass of CoreBot. Keeps track of polls and
+/** Main class for the voting bot. Subclass of CoreBot. Keeps track of polls and
   * can send info to the corresponding chats
+  * @param token
+  *   The Telegram token
+  * @param db
+  *   Database client
   */
 class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
 
@@ -41,11 +42,21 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
 
   private var mostRecentPollMessageId: Int = _
 
+  /** Creates a new PollData object
+    *
+    * @param chatId
+    * @param pollId
+    * @param date
+    */
   def newPoll(chatId: ChatId, pollId: Int, date: String): Unit = {
     val data: PollData = new PollData(pollId, date, chatId, db)
     this.getChat(chatId).get.addPoll(pollId, data)
   }
 
+  /** Finds all Polls in the currect instance with valid parameters
+    *
+    * @return
+    */
   def findValidPolls(): Map[ChatId, Boolean] = chats
     .map(c => {
       val mostRecetPoll: (Int, PollData) = c.getLatestPoll()
@@ -54,6 +65,12 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     })
     .to(collection.mutable.Map)
 
+  /** Makes and sends a ready poll to the specified chat
+    *
+    * @param pollId
+    * @param chatId
+    * @return
+    */
   def makePoll(pollId: Int, chatId: ChatId): Future[Unit] = Future {
 
     val _name: String =
@@ -82,6 +99,13 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     }
   }
 
+  /** Sends a poll to the specified chat with the options provided
+    *
+    * @param options
+    * @param _name
+    * @param chatId
+    * @param pollId
+    */
   def sendPoll(
       options: Array[String],
       _name: String,
@@ -106,6 +130,13 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     println("Poll Sent!")
   }
 
+  /** Stops given polls and updates the data in the pollData object
+    *
+    * @param chatId
+    * @param pollId
+    * @param stop
+    * @return
+    */
   def stopPollAndUpdateData(
       chatId: ChatId,
       pollId: Int,
@@ -117,7 +148,7 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
 
     val f: Future[Poll] = request(stop)
 
-    val result: Try[Poll] = Await.ready(f, 5 seconds).value.get
+    val result: Try[Poll] = Await.ready(f, Duration.Inf).value.get
     val resultEither = result match {
       case Success(t) => {
         t match {
@@ -137,6 +168,14 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     return f.map(_ => errorMessage)
   }
 
+  /** Stops given poll
+    *
+    * @param chatId
+    * @param pollId
+    * @param pollData
+    * @return
+    *   Potential list of errors
+    */
   def stopPolls(
       chatId: ChatId,
       pollId: Int,
@@ -162,6 +201,10 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     Some(errorList)
   }
 
+  /** The command for adding an option to the current poll
+    *
+    * @return
+    */
   onCommand("addOption") { implicit msg =>
     {
       withArgs { args =>
@@ -238,14 +281,16 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
       val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
       val r: ArrayBuffer[(String, Int)] =
         Await.result(
-          db.getResults(chats.filter(_.is(thisChatId)).head.getLatestPoll()._1),
+          db.getResults(
+            chats.filter(_.is(thisChatId)).head.getLatestPoll()._1
+          ),
           Duration.Inf
         )
       request(
         SendMessage(
           thisChatId,
-          (for (s <- r) yield {
-            s"option: ${s._1}, votes: ${s._2}"
+          "results: \n" + (for ((text, votes) <- r) yield {
+            s"option: ${text}, votes: ${votes}"
           }).mkString("\n"),
           parseMode = Some(ParseMode.HTML)
         )
@@ -253,9 +298,9 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     }
   }
 
-  /*
-      The Command for initalizing a chat (adding it to the collection of tracked chats)
-   */
+  /** The Command for initalizing a chat (adding it to the collection of tracked
+    * chats)
+    */
   onCommand("init") { implicit msg =>
     val curChatId: ChatId = ChatId.fromChat(msg.chat.id)
 

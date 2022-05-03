@@ -27,6 +27,7 @@ class ChatEntity(private val chatId: ChatId) {
   def getPoll(pollId: Int): Option[PollData] = Some(polls(pollId))
   def getPolls(): Map[Int, PollData] = polls
   def getLatestPoll(): (Int, PollData) = polls.maxBy(_._1)
+  def getPreviousPoll(): (Int, PollData) = polls.toArray.sortBy(-_._1).tail.head
 
   def getId(): ChatId = chatId
 

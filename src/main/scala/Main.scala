@@ -28,7 +28,7 @@ object Main extends App {
 
   private var bot: VotingBot = new VotingBot(key.get, dbClient)
   private val periodTimeInMinutes: Int = 1
-  private val answerPeriodTimeInSeconds: Int = 120
+  private val answerPeriodTimeInSeconds: Int = 15
   private val counter: Counter = new Counter
 
   // Init first poll
@@ -62,8 +62,8 @@ object Main extends App {
       answerPeriodTimeInSeconds,
       counter
     ),
-    periodTimeInMinutes * 60 * 1000,
-    periodTimeInMinutes * 60 * 1000
+    periodTimeInMinutes * 20 * 1000,
+    periodTimeInMinutes * 20 * 1000
   )
 
   // Run the bot

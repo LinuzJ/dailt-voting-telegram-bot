@@ -28,7 +28,9 @@ class DBClient {
         ResultSet.CONCUR_READ_ONLY
       )
 
-      stm.executeQuery(s"INSERT INTO polls (id, name) VALUES (${id}, ${name})")
+      stm.executeQuery(
+        s"INSERT INTO polls (id, name) VALUES (${id}, '${name}')"
+      )
     }
   }
 
@@ -45,7 +47,7 @@ class DBClient {
       )
 
       stm.executeQuery(
-        s"INSERT INTO poll_results (pollId, option_text, msgId, votes) VALUES (${id}, ${text}, ${msgId
+        s"INSERT INTO poll_results (pollId, option_text, msgId, votes) VALUES (${id}, '${text}', ${msgId
           .getOrElse(-2)}, ${votes})"
       )
     }
@@ -59,7 +61,10 @@ class DBClient {
       )
       var r: ArrayBuffer[(String, String, Boolean)] =
         ArrayBuffer[(String, String, Boolean)]()
-      val rs = stm.executeQuery("SELECT * from polls")
+
+      val sql = "SELECT * from polls"
+      val rs = stm.executeQuery(sql)
+
       while (rs.next) {
         r += (
           (
@@ -73,17 +78,17 @@ class DBClient {
     }
   }
 
-  def getResults(id: Int): Future[ArrayBuffer[(String, Int)]] = {
+  def getResults(id: Int): Future[ArrayBuffer[(String, String)]] = {
     Future {
       val stm = conn.createStatement(
         ResultSet.TYPE_FORWARD_ONLY,
         ResultSet.CONCUR_READ_ONLY
       )
-      var r: ArrayBuffer[(String, Int)] = ArrayBuffer[(String, Int)]()
+      var r: ArrayBuffer[(String, String)] = ArrayBuffer[(String, String)]()
       val rs =
         stm.executeQuery(s"SELECT * from poll_results WHERE pollId=${id}")
       while (rs.next) {
-        r += ((rs.getString("option_text"), rs.getInt("votes")))
+        r += ((rs.getString("option_text"), rs.getString("votes")))
       }
       r
     }

@@ -263,7 +263,7 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     {
       val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
       val r: ArrayBuffer[(String, String, Boolean)] =
-        Await.result(db.getPolls(), Duration.Inf)
+        Await.result(db.getPolls(thisChatId), Duration.Inf)
       request(
         SendMessage(
           thisChatId,
@@ -279,18 +279,30 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
   onCommand("results") { implicit msg =>
     {
       val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
-      val r: ArrayBuffer[(String, String)] =
+      var ids = chats
+        .filter(_.is(thisChatId))
+        .head
+        .getPolls()
+        .toArray
+        .sortBy(-_._1)
+        .tail
+        .map(_._1)
+
+      val r: Map[Int, ArrayBuffer[(String, String)]] =
         Await.result(
           db.getResults(
-            chats.filter(_.is(thisChatId)).head.getPreviousPoll()._1
+            ids,
+            thisChatId
           ),
           Duration.Inf
         )
       request(
         SendMessage(
           thisChatId,
-          "results: \n" + (for (text <- r) yield {
-            s"option: ${text._1}, votes: ${text._2}"
+          "Results: \n" + (for ((pollId, data) <- r) yield {
+            s"  Poll: ${pollId}\n" + (for (res <- data) yield {
+              s"    ${res._1} --> votes: ${res._2}"
+            }).mkString("\n")
           }).mkString("\n"),
           parseMode = Some(ParseMode.HTML)
         )

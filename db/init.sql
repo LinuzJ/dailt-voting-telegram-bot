@@ -1,10 +1,13 @@
 CREATE TABLE polls (
-	id INT PRIMARY KEY,
+	id SERIAL PRIMARY KEY,
+	pollId INT,
 	name TEXT,
+	chatId TEXT,
 	finished BOOLEAN DEFAULT FALSE
 );
 CREATE TABLE poll_results (
 	id SERIAL PRIMARY KEY,
+	chatId TEXT,
 	pollId INT,
 	option_text TEXT,
 	msgId INT,

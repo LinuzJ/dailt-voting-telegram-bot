@@ -21,7 +21,7 @@ import scala.concurrent.{Future, Await}
   */
 class PollData(val id: Int, name: String, val chatId: ChatId, db: DBClient) {
 
-  Await.ready(db.addPoll(id, name), Duration.Inf)
+  db.addPoll(id, name, chatId)
 
   private val pollName: String = name
   private var options: Map[String, (Int, Int, Option[User])] =
@@ -42,7 +42,7 @@ class PollData(val id: Int, name: String, val chatId: ChatId, db: DBClient) {
   def setResult(_poll: Poll, _options: Array[PollOption]): Unit = {
     for (option <- _options) {
 
-      db.addResult(id, option.text, pollMsgId, option.voterCount)
+      db.addResult(id, option.text, pollMsgId, chatId, option.voterCount)
 
       val t: String = option.text
       if (results.keys.toArray.contains(t)) {

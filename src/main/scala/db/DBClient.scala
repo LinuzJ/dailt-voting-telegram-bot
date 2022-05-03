@@ -6,6 +6,8 @@ import com.bot4s.telegram.models.User
 import scala.concurrent.{Future, Await}
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+import scala.collection.mutable.Map
+import com.bot4s.telegram.models.ChatId
 
 class DBClient {
 
@@ -21,7 +23,7 @@ class DBClient {
 
   val conn = DriverManager.getConnection(con_str)
 
-  def addPoll(id: Int, name: String): Future[Unit] = {
+  def addPoll(id: Int, name: String, chatId: ChatId): Future[Unit] = {
     Future {
       val stm = conn.createStatement(
         ResultSet.TYPE_FORWARD_ONLY,
@@ -29,7 +31,7 @@ class DBClient {
       )
 
       stm.executeQuery(
-        s"INSERT INTO polls (id, name) VALUES (${id}, '${name}')"
+        s"INSERT INTO polls (pollId, name, chatId) VALUES (${id}, '${name}', '${chatId.toString()}')"
       )
     }
   }
@@ -38,6 +40,7 @@ class DBClient {
       id: Int,
       text: String,
       msgId: Option[Int],
+      chatId: ChatId,
       votes: Int
   ): Future[Unit] = {
     Future {
@@ -47,13 +50,16 @@ class DBClient {
       )
 
       stm.executeQuery(
-        s"INSERT INTO poll_results (pollId, option_text, msgId, votes) VALUES (${id}, '${text}', ${msgId
+        s"INSERT INTO poll_results (chatId, pollId, option_text, msgId, votes) VALUES ('${chatId
+          .toString()}', ${id}, '${text}', ${msgId
           .getOrElse(-2)}, ${votes})"
       )
     }
   }
 
-  def getPolls(): Future[ArrayBuffer[(String, String, Boolean)]] = {
+  def getPolls(
+      chatId: ChatId
+  ): Future[ArrayBuffer[(String, String, Boolean)]] = {
     Future {
       val stm = conn.createStatement(
         ResultSet.TYPE_FORWARD_ONLY,
@@ -62,13 +68,13 @@ class DBClient {
       var r: ArrayBuffer[(String, String, Boolean)] =
         ArrayBuffer[(String, String, Boolean)]()
 
-      val sql = "SELECT * from polls"
+      val sql = s"SELECT * from polls WHERE chatId='${chatId.toString()}'"
       val rs = stm.executeQuery(sql)
 
       while (rs.next) {
         r += (
           (
-            rs.getString("id"),
+            rs.getString("pollId"),
             rs.getString("name"),
             rs.getBoolean("finished")
           )
@@ -78,19 +84,29 @@ class DBClient {
     }
   }
 
-  def getResults(id: Int): Future[ArrayBuffer[(String, String)]] = {
+  def getResults(
+      ids: Array[Int],
+      chatId: ChatId
+  ): Future[Map[Int, ArrayBuffer[(String, String)]]] = {
     Future {
       val stm = conn.createStatement(
         ResultSet.TYPE_FORWARD_ONLY,
         ResultSet.CONCUR_READ_ONLY
       )
-      var r: ArrayBuffer[(String, String)] = ArrayBuffer[(String, String)]()
-      val rs =
-        stm.executeQuery(s"SELECT * from poll_results WHERE pollId=${id}")
-      while (rs.next) {
-        r += ((rs.getString("option_text"), rs.getString("votes")))
+      var res: Map[Int, ArrayBuffer[(String, String)]] =
+        Map[Int, ArrayBuffer[(String, String)]]()
+      for (id <- ids) {
+        var r: ArrayBuffer[(String, String)] = ArrayBuffer[(String, String)]()
+        val rs =
+          stm.executeQuery(
+            s"SELECT * from poll_results WHERE pollId=${id} AND chatId='${chatId.toString()}'"
+          )
+        while (rs.next) {
+          r += ((rs.getString("option_text"), rs.getString("votes")))
+        }
+        res(id) = r
       }
-      r
+      res
     }
   }
 }

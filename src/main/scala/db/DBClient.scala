@@ -32,7 +32,12 @@ class DBClient {
       )
       try {
         stm.executeQuery(
-          s"INSERT INTO polls (pollId, name, chatId) VALUES (${id}, '${name}', '${chatId.toString()}')"
+          s"""INSERT INTO 
+                polls 
+                (pollId, name, chatId)
+              VALUES 
+                (${id}, '${name}', '${chatId.toString()}')
+            """
         )
       } catch {
         case e: Throwable => println("ERROR: " + e)
@@ -55,9 +60,16 @@ class DBClient {
       )
       try {
         stm.executeQuery(
-          s"INSERT INTO poll_results (chatId, pollId, option_text, msgId, votes) VALUES ('${chatId
-            .toString()}', ${id}, '${text}', ${msgId
-            .getOrElse(-2)}, ${votes})"
+          s"""INSERT INTO 
+                poll_results 
+                (chatId, pollId, option_text, msgId, votes) 
+              VALUES 
+                ('${chatId.toString()}', 
+                  ${id},
+                  '${text}',
+                  ${msgId.getOrElse(-2)},
+                  ${votes})
+            """
         )
       } catch {
         case e: Throwable => println("ERROR: " + e)

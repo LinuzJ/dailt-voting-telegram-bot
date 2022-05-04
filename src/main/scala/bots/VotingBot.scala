@@ -25,6 +25,7 @@ import com.bot4s.telegram.models.{
 import java.text.SimpleDateFormat
 import java.util.Calendar;
 import scala.collection.mutable.ArrayBuffer
+import cats.implicits
 
 /** Main class for the voting bot. Subclass of CoreBot. Keeps track of polls and
   * can send info to the corresponding chats
@@ -240,25 +241,66 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     }
   }
 
-  onCommand("data") { implicit msg =>
+  onCommand("removeOption") { implicit msg =>
     {
-      val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
-      request(
-        SendMessage(
-          thisChatId,
-          (for (poll <- this.getChat(thisChatId).get.getPolls()) yield {
-            var re: String = poll._2.getPollName()
-            poll._2
-              .getResults()
-              .foreach(x => re = re + " " + x._1 + ": " + x._2)
-            re
-          }).mkString("\n"),
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => ())
+      withArgs { args =>
+        {
+          val chatId: ChatId = ChatId.fromChat(msg.chat.id)
+          var re: String = "Error, please try again!"
+
+          val num: Option[Int] =
+            try {
+              Some(args.mkString("").toInt)
+            } catch {
+              case e: Throwable => None
+            }
+
+          if (num.isDefined) {
+
+            val latest: (Int, PollData) =
+              this.getChat(chatId).get.getLatestPoll()
+            // Add option
+
+            re = latest._2.deleteOption(
+              num.get
+            )
+          }
+          Future()
+        }
+      }
     }
   }
 
+  /** Sends the options from the current poll
+    *
+    * @return
+    */
+  onCommand("options") { implicit msg =>
+    {
+      val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
+
+      val msgToSen: String = "Options in the current poll: \n" +
+        (for (
+          poll <- this
+            .getChat(thisChatId)
+            .get
+            .getLatestPoll()
+            ._2
+            .getPollOptions
+            .zipWithIndex
+        )
+          yield {
+            s"    ${poll._2}  =>  ${poll._1._1}"
+          }).mkString("\n")
+
+      this.sendMessage(msgToSen, thisChatId)
+    }
+  }
+
+  /** Sends a list of all of the polls from the chat
+    *
+    * @return
+    */
   onCommand("polls") { implicit msg =>
     {
       val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
@@ -268,7 +310,7 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
         SendMessage(
           thisChatId,
           (for (s <- r) yield {
-            s"id: ${s._1}, name: ${s._2}, finished: ${s._3}"
+            s"Poll id: ${s._1}, name: ${s._2}, finished: ${s._3}"
           }).mkString("\n"),
           parseMode = Some(ParseMode.HTML)
         )
@@ -276,6 +318,9 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     }
   }
 
+  /** Returns the results from the chat. Fetched from the database
+    * @return
+    */
   onCommand("results") { implicit msg =>
     {
       val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
@@ -288,7 +333,7 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
         .tail
         .map(_._1)
 
-      val r: Map[Int, ArrayBuffer[(String, String)]] =
+      val r: Map[String, ArrayBuffer[(String, String)]] =
         Await.result(
           db.getResults(
             ids,
@@ -296,14 +341,17 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
           ),
           Duration.Inf
         )
+
+      val msgToSend: String = "Results: \n" + (for ((pollId, data) <- r) yield {
+        s"  Poll: ${pollId}\n" + (for (res <- data) yield {
+          s"    ${res._1} --> votes: ${res._2}"
+        }).mkString("\n")
+      }).mkString("\n")
+
       request(
         SendMessage(
           thisChatId,
-          "Results: \n" + (for ((pollId, data) <- r) yield {
-            s"  Poll: ${pollId}\n" + (for (res <- data) yield {
-              s"    ${res._1} --> votes: ${res._2}"
-            }).mkString("\n")
-          }).mkString("\n"),
+          msgToSend,
           parseMode = Some(ParseMode.HTML)
         )
       ).map(_ => ())
@@ -323,7 +371,7 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
 
       chats += new ChatEntity(curChatId)
 
-      this.newPoll(curChatId, -1, "init")
+      this.newPoll(curChatId, -1, Func.getCurrentDate())
 
       request(
         SendMessage(
@@ -386,7 +434,7 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
 
   onCommand("help") { implicit msg =>
     this.sendMessage(
-      "Here are the availible commands:\n - /help\n - /init\n - /addOption\n - /data\n",
+      "Here are the availible commands:\n - /help  Lists the most useful commands\n - /init  Initializes a chat\n - /addOption  Adds an option to the current poll\n - /polls  Lists all the polls (past and present) from this chat\n - /results  Lists the results of all polls from this chat ",
       msg.chat.chatId
     )
   }

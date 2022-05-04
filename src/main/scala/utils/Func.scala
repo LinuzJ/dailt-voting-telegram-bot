@@ -15,6 +15,7 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import com.bot4s.telegram.models.ChatId
+import java.util.Date
 
 object Func {
   /*
@@ -23,6 +24,15 @@ object Func {
   def getCurrentDate(): String = {
     val format = new SimpleDateFormat("d-M-y")
     format.format(Calendar.getInstance().getTime())
+  }
+
+  def getTomorrowDate(): String = {
+    val dt = new Date()
+    val format = new SimpleDateFormat("d-M-y")
+    val c = Calendar.getInstance()
+    c.setTime(dt)
+    c.add(Calendar.DATE, 1)
+    format.format(c.getTime())
   }
 
   /*

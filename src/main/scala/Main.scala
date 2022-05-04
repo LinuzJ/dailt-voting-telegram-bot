@@ -28,7 +28,8 @@ object Main extends App {
 
   private var bot: VotingBot = new VotingBot(key.get, dbClient)
   private val periodTimeInMinutes: Int = 1
-  private val answerPeriodTimeInSeconds: Int = 180
+  private val answerPeriodTimeInSeconds: Int = 15
+  private val timeOfDay: Int = 19
   private val counter: Counter = new Counter
 
   // Init first poll
@@ -38,21 +39,9 @@ object Main extends App {
   })
 
   val today: Calendar = Calendar.getInstance();
-  today.set(Calendar.HOUR_OF_DAY, 11);
+  today.set(Calendar.HOUR_OF_DAY, timeOfDay - 3);
   today.set(Calendar.MINUTE, 0);
   today.set(Calendar.SECOND, 0);
-
-  // Schedule the polling
-  timer.schedule(
-    Func.function2TimerTask(
-      Func.timerTask,
-      bot,
-      answerPeriodTimeInSeconds,
-      counter
-    ),
-    today.getTime(),
-    TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS)
-  )
 
   // Schedule the polling
   // timer.schedule(
@@ -62,9 +51,21 @@ object Main extends App {
   //     answerPeriodTimeInSeconds,
   //     counter
   //   ),
-  //   periodTimeInMinutes * 30 * 1000,
-  //   periodTimeInMinutes * 30 * 1000
+  //   today.getTime(),
+  //   TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS)
   // )
+
+  // Schedule the polling
+  timer.schedule(
+    Func.function2TimerTask(
+      Func.timerTask,
+      bot,
+      answerPeriodTimeInSeconds,
+      counter
+    ),
+    periodTimeInMinutes * 30 * 1000,
+    periodTimeInMinutes * 30 * 1000
+  )
 
   // Run the bot
   val eol = bot.run()

@@ -8,6 +8,7 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.collection.mutable.Map
 import com.bot4s.telegram.models.ChatId
+import cats.instances.future
 
 class DBClient {
 
@@ -19,7 +20,7 @@ class DBClient {
   classOf[org.postgresql.Driver]
 
   val con_str =
-    s"jdbc:postgresql://localhost:5432/${DB_NAME.get}?user=${DB_USER.get}"
+    s"jdbc:postgresql://127.0.0.1:5432/${DB_NAME.get}?user=${DB_USER.get}"
 
   val conn = DriverManager.getConnection(con_str)
 
@@ -29,10 +30,14 @@ class DBClient {
         ResultSet.TYPE_FORWARD_ONLY,
         ResultSet.CONCUR_READ_ONLY
       )
+      try {
+        stm.executeQuery(
+          s"INSERT INTO polls (pollId, name, chatId) VALUES (${id}, '${name}', '${chatId.toString()}')"
+        )
+      } catch {
+        case e: Throwable => println("ERROR: " + e)
+      }
 
-      stm.executeQuery(
-        s"INSERT INTO polls (pollId, name, chatId) VALUES (${id}, '${name}', '${chatId.toString()}')"
-      )
     }
   }
 
@@ -48,12 +53,16 @@ class DBClient {
         ResultSet.TYPE_FORWARD_ONLY,
         ResultSet.CONCUR_READ_ONLY
       )
+      try {
+        stm.executeQuery(
+          s"INSERT INTO poll_results (chatId, pollId, option_text, msgId, votes) VALUES ('${chatId
+            .toString()}', ${id}, '${text}', ${msgId
+            .getOrElse(-2)}, ${votes})"
+        )
+      } catch {
+        case e: Throwable => println("ERROR: " + e)
+      }
 
-      stm.executeQuery(
-        s"INSERT INTO poll_results (chatId, pollId, option_text, msgId, votes) VALUES ('${chatId
-          .toString()}', ${id}, '${text}', ${msgId
-          .getOrElse(-2)}, ${votes})"
-      )
     }
   }
 
@@ -87,26 +96,72 @@ class DBClient {
   def getResults(
       ids: Array[Int],
       chatId: ChatId
-  ): Future[Map[Int, ArrayBuffer[(String, String)]]] = {
+  ): Future[Map[String, ArrayBuffer[(String, String)]]] = {
     Future {
       val stm = conn.createStatement(
         ResultSet.TYPE_FORWARD_ONLY,
         ResultSet.CONCUR_READ_ONLY
       )
-      var res: Map[Int, ArrayBuffer[(String, String)]] =
-        Map[Int, ArrayBuffer[(String, String)]]()
+      var res: Map[String, ArrayBuffer[(String, String)]] =
+        Map[String, ArrayBuffer[(String, String)]]()
+
       for (id <- ids) {
-        var r: ArrayBuffer[(String, String)] = ArrayBuffer[(String, String)]()
-        val rs =
-          stm.executeQuery(
-            s"SELECT * from poll_results WHERE pollId=${id} AND chatId='${chatId.toString()}'"
-          )
-        while (rs.next) {
-          r += ((rs.getString("option_text"), rs.getString("votes")))
-        }
-        res(id) = r
+        try {
+          var r: ArrayBuffer[(String, String)] = ArrayBuffer[(String, String)]()
+
+          val sql =
+            s"""SELECT 
+                polls.name name,
+                poll_results.option_text option_text,
+                poll_results.votes votes
+              FROM
+                poll_results 
+                  INNER JOIN 
+                polls 
+                  ON 
+                poll_results.pollId = polls.pollId 
+              WHERE 
+                poll_results.pollId=${id}
+                  AND 
+                poll_results.chatId='${chatId.toString()}'
+            """
+          val rs = stm.executeQuery(sql)
+
+          var name: Option[String] = None
+          while (rs.next) {
+            if (!name.isDefined) name = Some(rs.getString("name"))
+            r += ((rs.getString("option_text"), rs.getString("votes")))
+          }
+          res(name.get) = r
+        } catch { case e: Throwable => println("ERROR:", e) }
+
       }
       res
+    }
+  }
+
+  def setFinished(pollId: Int, chatId: ChatId): Future[Unit] = {
+    Future {
+      val stm = conn.createStatement(
+        ResultSet.TYPE_FORWARD_ONLY,
+        ResultSet.CONCUR_READ_ONLY
+      )
+      try {
+        stm.executeQuery(
+          s"""
+          UPDATE
+            polls
+          SET
+            finished=true
+          WHERE
+            pollId=${pollId}
+              AND
+            chatId='${chatId.toString()}'
+        """
+        )
+      } catch {
+        case e: Throwable => println("ERROR: " + e)
+      }
     }
   }
 }

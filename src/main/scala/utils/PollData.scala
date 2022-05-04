@@ -42,6 +42,7 @@ class PollData(val id: Int, name: String, val chatId: ChatId, db: DBClient) {
   def setResult(_poll: Poll, _options: Array[PollOption]): Unit = {
     for (option <- _options) {
 
+      Await.ready(db.setFinished(id, chatId), Duration.Inf)
       db.addResult(id, option.text, pollMsgId, chatId, option.voterCount)
 
       val t: String = option.text
@@ -65,14 +66,21 @@ class PollData(val id: Int, name: String, val chatId: ChatId, db: DBClient) {
     return "Option added!"
   }
 
-  def deleteOption(name: String): Option[String] = {
-    if (!options.keys.exists(_ == name)) {
-      return Some("This option does not exist.")
+  def deleteOption(indx: Int): String = {
+    try {
+      val indexed = this.getPollOptions.zipWithIndex
+
+      if (indexed.exists(_._2 == indx)) {
+        val option = indexed.filter(_._2 == indx).head._1._1
+        options.remove(option)
+        s"Option: < ${option} > is removed"
+      } else {
+        "Something went wrong"
+      }
+    } catch {
+      case e: Throwable => println(e); e.toString()
     }
 
-    options.-(name)
-
-    return None
   }
 
   def representation(): String = {

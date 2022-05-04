@@ -7,6 +7,7 @@ import ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import com.bot4s.telegram.models.ChatId
 import scala.collection.mutable.Map
+import utils.Func
 
 object ScheduledTasks {
 
@@ -44,7 +45,7 @@ object ScheduledTasks {
 
       // Init new poll
       counter.increment()
-      b.newPoll(chatId, counter.getCounter(), counter.getCounter().toString())
+      b.newPoll(chatId, counter.getCounter(), Func.getTomorrowDate())
 
       chatId
     }

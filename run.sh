@@ -18,7 +18,7 @@ build () {
     sudo docker build --build-arg TELEGRAM_TOKEN_ARG=$TELEGRAM_TOKEN -t voting-bot .
 }
 build_pi () {
-    sudo docker build --build-arg TELEGRAM_TOKEN_ARG=$TELEGRAM_TOKEN -t voting-bot -build-arg _IMAGE=arm32v7/adoptopenjdk:11-jre-hotspot .
+    sudo docker build --build-arg TELEGRAM_TOKEN_ARG=$TELEGRAM_TOKEN -t voting-bot --build-arg _IMAGE=arm32v7/adoptopenjdk:11-jre-hotspot .
 }
 run_docker () {
     sudo docker run $detatch --name voting-bot --network="host" voting-bot

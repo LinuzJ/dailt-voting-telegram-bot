@@ -202,6 +202,21 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     Some(errorList)
   }
 
+  /** Returns a list of availible commands
+    *
+    * @return
+    */
+  onCommand("help") { implicit msg =>
+    {
+      val chatId: ChatId = ChatId.fromChat(msg.chat.id)
+      this.sendMessage(
+        "Here are the availible commands:\n - /help  Lists the most useful commands\n - /init  Initializes a chat\n - /addOption -- Option: Text -- Adds an option to the current poll\n - /polls  Lists all the polls (past and present) from this chat\n - /results  Lists the results of all polls from this chat\n - /options Lists all of the options in the current poll and their indexes\n - /removeOption -- index: Int -- Removes the specified option from the poll",
+        chatId
+      )
+
+    }
+  }
+
   /** The command for adding an option to the current poll
     *
     * @return
@@ -229,13 +244,7 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
               re = "Init the chat first!"
             }
           }
-          request(
-            SendMessage(
-              chatId,
-              re,
-              parseMode = Some(ParseMode.HTML)
-            )
-          ).map(_ => ())
+          this.sendMessage(re, chatId)
         }
       }
     }
@@ -281,23 +290,31 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     */
   onCommand("options") { implicit msg =>
     {
-      val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
+      Future {
+        try {
+          val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
 
-      val msgToSen: String = "Options in the current poll: \n" +
-        (for (
-          poll <- this
-            .getChat(thisChatId)
-            .get
-            .getLatestPoll()
-            ._2
-            .getPollOptions
-            .zipWithIndex
-        )
-          yield {
-            s"    ${poll._2}  =>  ${poll._1._1}"
-          }).mkString("\n")
+          val msgToSen: String = "Options in the current poll: \n" +
+            (for (
+              poll <- this
+                .getChat(thisChatId)
+                .get
+                .getLatestPoll()
+                ._2
+                .getPollOptions
+                .zipWithIndex
+            )
+              yield {
+                s"    ${poll._2}  =>  ${poll._1._1}"
+              }).mkString("\n")
 
-      this.sendMessage(msgToSen, thisChatId)
+          this.sendMessage(msgToSen, thisChatId)
+        } catch {
+          case e: RuntimeException => println(e)
+          case _: Throwable =>
+            println("Some other exception in while fetching polls")
+        }
+      }
     }
   }
 
@@ -307,19 +324,23 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     */
   onCommand("polls") { implicit msg =>
     {
-      val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
-      val r: ArrayBuffer[(String, String, Boolean)] =
-        Await.result(db.getPolls(thisChatId), Duration.Inf)
+      Future {
+        try {
+          val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
+          val r: ArrayBuffer[(String, String, Boolean)] =
+            Await.result(db.getPolls(thisChatId), Duration.Inf)
 
-      request(
-        SendMessage(
-          thisChatId,
-          (for (s <- r) yield {
+          val msgToSend: String = (for (s <- r) yield {
             s"Poll id: ${s._1}, name: ${s._2}, finished: ${s._3}"
-          }).mkString("\n"),
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => ())
+          }).mkString("\n")
+
+          this.sendMessage(msgToSend, thisChatId)
+        } catch {
+          case e: RuntimeException => println(e)
+          case _: Throwable =>
+            println("Some other exception in while fetching polls")
+        }
+      }
     }
   }
 
@@ -328,38 +349,41 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     */
   onCommand("results") { implicit msg =>
     {
-      val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
-      var ids = chats
-        .filter(_.is(thisChatId))
-        .head
-        .getPolls()
-        .toArray
-        .sortBy(-_._1)
-        .tail
-        .map(_._1)
+      Future {
+        try {
+          val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
+          var ids = chats
+            .filter(_.is(thisChatId))
+            .head
+            .getPolls()
+            .toArray
+            .sortBy(-_._1)
+            .tail
+            .map(_._1)
 
-      val r: Map[String, ArrayBuffer[(String, String)]] =
-        Await.result(
-          db.getResults(
-            ids,
-            thisChatId
-          ),
-          Duration.Inf
-        )
+          val r: Map[String, ArrayBuffer[(String, String)]] =
+            Await.result(
+              db.getResults(
+                ids,
+                thisChatId
+              ),
+              Duration.Inf
+            )
 
-      val msgToSend: String = "Results: \n" + (for ((pollId, data) <- r) yield {
-        s"  Poll: ${pollId}\n" + (for (res <- data) yield {
-          s"    ${res._1} --> votes: ${res._2}"
-        }).mkString("\n")
-      }).mkString("\n")
+          val msgToSend: String =
+            "Results: \n" + (for ((pollId, data) <- r) yield {
+              s"  Poll: ${pollId}\n" + (for (res <- data) yield {
+                s"    ${res._1} --> votes: ${res._2}"
+              }).mkString("\n")
+            }).mkString("\n")
 
-      request(
-        SendMessage(
-          thisChatId,
-          msgToSend,
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => ())
+          this.sendMessage(msgToSend, thisChatId)
+        } catch {
+          case e: RuntimeException => println(e)
+          case _: Throwable =>
+            println("Some other exception in while fetching polls")
+        }
+      }
     }
   }
 
@@ -401,21 +425,9 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
 
       this.newPoll(curChatId, -1, Func.getCurrentDate())
 
-      request(
-        SendMessage(
-          ChatId.fromChat(msg.chat.id),
-          "Setup done!",
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => ())
+      this.sendMessage("Setup done!", ChatId.fromChat(msg.chat.id))
     } else {
-      request(
-        SendMessage(
-          ChatId.fromChat(msg.chat.id),
-          "Chat already setup!",
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => ())
+      this.sendMessage("Chat already setup!", ChatId.fromChat(msg.chat.id))
     }
   }
 
@@ -424,24 +436,12 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     val chatId: ChatId = msg.chat.chatId
 
     if (this.getAdmin().isDefined) {
-      request(
-        SendMessage(
-          chatId,
-          "Admin already setup..",
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => ())
+      this.sendMessage("Admin already setup..", chatId)
     } else {
       // set admin
       this.setAdmin(cand)
 
-      request(
-        SendMessage(
-          chatId,
-          "Admin setup..",
-          parseMode = Some(ParseMode.HTML)
-        )
-      ).map(_ => ())
+      this.sendMessage("Admin setup!", chatId)
     }
   }
 
@@ -460,14 +460,12 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     }
   }
 
-  onCommand("help") { implicit msg =>
-    request(
-      SendMessage(
-        msg.chat.chatId,
-        "Here are the availible commands:\n - /help  Lists the most useful commands\n - /init  Initializes a chat\n - /addOption <Option: Text> Adds an option to the current poll\n - /polls  Lists all the polls (past and present) from this chat\n - /results  Lists the results of all polls from this chat\n - /options Lists all of the options in the current poll and their indexes\n - /removeOption <index: Int> Removes the specified option from the poll",
-        parseMode = Some(ParseMode.HTML)
-      )
-    ).map(_ => ())
+  onCommand("capy") { implicit msg =>
+    {
+      val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
+
+      this.sendMessage("I'm very capy to be here!", thisChatId)
+    }
   }
 
   def test(): String = "test"

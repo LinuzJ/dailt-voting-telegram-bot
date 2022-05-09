@@ -65,18 +65,24 @@ abstract class CoreBot(val token: String)
     *   Future
     */
   def sendMessage(text: String, chatId: ChatId): Future[Unit] = {
-    Future(chatId match {
-      case id: ChatId => {
-        request(
-          SendMessage(
-            id,
-            text,
-            parseMode = Some(ParseMode.HTML)
-          )
-        )
+    Future(
+      try {
+        chatId match {
+          case id: ChatId => {
+            request(
+              SendMessage(
+                id,
+                text,
+                parseMode = Some(ParseMode.HTML)
+              )
+            )
+          }
+          case _ => println("No chat Id..")
+        }
+      } catch {
+        case e: Throwable => println("\nERROR: " + e)
       }
-      case _ => println("No chat Id..")
-    })
+    )
   }
 
   /** Replies to specified message in specified chat

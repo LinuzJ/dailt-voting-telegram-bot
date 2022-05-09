@@ -6,10 +6,10 @@ ThisBuild / organization := "com.example"
 ThisBuild / organizationName := "example"
 
 // Core with minimal dependencies, enough to spawn your first bot.
-libraryDependencies += "com.bot4s" %% "telegram-core" % "5.3.0"
+libraryDependencies += "com.bot4s" %% "telegram-core" % "5.4.2"
 
 // Extra goodies: Webhooks, support for games, bindings for actors.
-libraryDependencies += "com.bot4s" %% "telegram-akka" % "5.3.0"
+libraryDependencies += "com.bot4s" %% "telegram-akka" % "5.4.2"
 
 // Add postgres db support
 libraryDependencies += "org.postgresql" % "postgresql" % "9.3-1102-jdbc41"

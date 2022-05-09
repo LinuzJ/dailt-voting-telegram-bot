@@ -1,5 +1,7 @@
 package utils
 
+/** Keeps track of the number of polls
+  */
 class Counter {
   private var counter: Int = 0
 

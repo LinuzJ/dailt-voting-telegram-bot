@@ -42,6 +42,11 @@ abstract class CoreBot(val token: String)
   // Chats (ChatId, (PollId, Polldata))
   var chats: ArrayBuffer[ChatEntity] = ArrayBuffer[ChatEntity]()
 
+  /** Gets the ChatEntity with the given ChatID
+    *
+    * @param chatId
+    * @return
+    */
   def getChat(chatId: ChatId): Option[ChatEntity] = {
     val filt = chats.filter(_.is(chatId))
 
@@ -50,6 +55,15 @@ abstract class CoreBot(val token: String)
     Some(filt.head)
   }
 
+  /** Wrapper for sending messages in specified chat
+    *
+    * @param text
+    *   The text you want to send
+    * @param chatId
+    *   The chat in which you want to send
+    * @return
+    *   Future
+    */
   def sendMessage(text: String, chatId: ChatId): Future[Unit] = {
     Future(chatId match {
       case id: ChatId => {
@@ -65,6 +79,17 @@ abstract class CoreBot(val token: String)
     })
   }
 
+  /** Replies to specified message in specified chat
+    *
+    * @param text
+    *   The text you want to send
+    * @param chatId
+    *   The chat in in which the message you respond to is located
+    * @param replyToMessageId
+    *   The messageId of the message you are responding to
+    * @return
+    *   Future
+    */
   def replyToMessage(
       text: String,
       chatId: ChatId,

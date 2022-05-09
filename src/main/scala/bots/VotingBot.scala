@@ -241,6 +241,10 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     }
   }
 
+  /** Remove specified option from the current poll
+    *
+    * @return
+    */
   onCommand("removeOption") { implicit msg =>
     {
       withArgs { args =>
@@ -359,6 +363,9 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
     }
   }
 
+  /** Flushes the DB. aka deketes all rows from all tables
+    * @return
+    */
   onCommand("flushdb") { implicit msg =>
     {
       val usr: User = msg.from.get

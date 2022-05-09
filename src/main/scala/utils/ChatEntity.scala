@@ -4,6 +4,10 @@ import com.bot4s.telegram.models.ChatId
 import com.bot4s.telegram.models.User
 import scala.collection.mutable.Map
 
+/** Describes and handles a given chats polls and data in the short term Holds
+  * up to 10 polls in memory
+  * @param chatId
+  */
 class ChatEntity(private val chatId: ChatId) {
 
   private val polls: Map[Int, PollData] = Map[Int, PollData]()

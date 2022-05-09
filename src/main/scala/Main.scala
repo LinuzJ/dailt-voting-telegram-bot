@@ -15,22 +15,29 @@ import db.DBClient
 
 object Main extends App {
 
-  val timer = new Timer()
-
   private val key: Option[String] = sys.env.get("TELEGRAM_TOKEN")
-
-  private val dbClient = new DBClient
 
   if (!key.isDefined) {
     Console.err.println("Please provide token in env variable")
     System.exit(0)
   }
 
+  // Timer for scheduling
+  private val timer = new Timer()
+
+  // DB-client communicating with the database
+  private val dbClient = new DBClient
+
+  // Counter for keeping track of polls
+  private val counter: Counter = new Counter
+
+  // The bot itself providing functionality
   private var bot: VotingBot = new VotingBot(key.get, dbClient)
+
+  // Timer variables
   private val periodTimeInMinutes: Int = 1
   private val answerPeriodTimeInSeconds: Int = 60 * 3
   private val timeOfDay: Int = 19
-  private val counter: Counter = new Counter
 
   // Init first poll
   bot.chats.foreach(x => {
@@ -38,6 +45,7 @@ object Main extends App {
     counter.increment()
   })
 
+  // Set time of day to send polls
   val today: Calendar = Calendar.getInstance();
   today.set(Calendar.HOUR_OF_DAY, timeOfDay - 3);
   today.set(Calendar.MINUTE, 0);
@@ -51,11 +59,11 @@ object Main extends App {
       answerPeriodTimeInSeconds,
       counter
     ),
-  today.getTime(),
-  TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS)
-)
+    today.getTime(),
+    TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS)
+  )
 
-  // Schedule the polling
+  // Schedule the polling (SHORT VERSION FOR LOCAL TESTING)
   // timer.schedule(
   //   Func.function2TimerTask(
   //     Func.timerTask,

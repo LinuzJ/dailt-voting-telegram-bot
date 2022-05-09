@@ -11,6 +11,18 @@ import utils.Func
 
 object ScheduledTasks {
 
+  /** Finish and stop polls in the specified chat. Also saves data to DB and
+    * initializes new polls
+    * @param b
+    *   The given Bot object
+    * @param chatId
+    *   The chat in which the polls you want to close are
+    * @param time
+    *   The Awnser period time
+    * @param counter
+    *   Counter object for keeping track of polls
+    * @return
+    */
   def finishChat(
       b: VotingBot,
       chatId: ChatId,
@@ -51,6 +63,17 @@ object ScheduledTasks {
     }
   }
 
+  /** Send replies to all messages added into the specified poll in the
+    * specified chat
+    *
+    * @param b
+    *   The Bot object
+    * @param chatId
+    *   The chat in which the poll and messages are located
+    * @param pollId
+    *   The specific poll that you are handling
+    * @return
+    */
   def sendReplies(
       b: VotingBot,
       chatId: ChatId,
@@ -65,7 +88,7 @@ object ScheduledTasks {
         .foreach(option => {
           Await.result(
             b.replyToMessage(
-              s"Option ${option._2._2} submitted by ${option._2._3.get.username
+              s"'${option._1}' submitted by ${option._2._3.get.username
                 .getOrElse("Unknown User!")}",
               chatId,
               option._2._2
@@ -76,6 +99,15 @@ object ScheduledTasks {
     }
   }
 
+  /** Initializes and performs countdown for anser period time
+    *
+    * @param b
+    *   Bot object
+    * @param time
+    *   Answer period time
+    * @param chatId
+    *   The chat
+    */
   def sentCountdown(
       b: VotingBot,
       time: Int,

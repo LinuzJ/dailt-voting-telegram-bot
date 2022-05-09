@@ -1,4 +1,5 @@
-FROM openjdk:11
+ARG _IMAGE=openjdk:11
+FROM $_IMAGE
 
 ARG TELEGRAM_TOKEN_ARG
 

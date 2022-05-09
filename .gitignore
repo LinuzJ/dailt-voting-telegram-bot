@@ -7,3 +7,4 @@ target/
 temp.txt
 .env
 .env.local
+run_local.sh

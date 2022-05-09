@@ -306,6 +306,7 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
       val thisChatId: ChatId = ChatId.fromChat(msg.chat.id)
       val r: ArrayBuffer[(String, String, Boolean)] =
         Await.result(db.getPolls(thisChatId), Duration.Inf)
+
       request(
         SendMessage(
           thisChatId,
@@ -355,6 +356,26 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
           parseMode = Some(ParseMode.HTML)
         )
       ).map(_ => ())
+    }
+  }
+
+  onCommand("flushdb") { implicit msg =>
+    {
+      val usr: User = msg.from.get
+      val chatId: ChatId = msg.chat.chatId
+
+      if (!this.getAdmin().isDefined) {
+        this.sendMessage("Init admin first", chatId)
+      } else {
+        if (this.getAdmin().get == usr) {
+          Await.ready(db.flushDB(), Duration.Inf)
+
+          this.sendMessage("Database flushed", chatId)
+
+        } else {
+          this.sendMessage("You are not the admin", chatId)
+        }
+      }
     }
   }
 

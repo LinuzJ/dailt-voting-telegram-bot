@@ -12,8 +12,8 @@ import cats.instances.future
 
 class DBClient {
 
-//   private val DB_NAME: Option[String] = sys.env.get("POSTGRES_DB")
-//   private val DB_USER: Option[String] = sys.env.get("POSTGRES_USER")
+  //   private val DB_NAME: Option[String] = sys.env.get("POSTGRES_DB")
+  //   private val DB_USER: Option[String] = sys.env.get("POSTGRES_USER")
   private val DB_NAME: Option[String] = Some("polls")
   private val DB_USER: Option[String] = Some("docker")
 
@@ -32,12 +32,12 @@ class DBClient {
       )
       try {
         stm.executeQuery(
-          s"""INSERT INTO 
-                polls 
-                (pollId, name, chatId)
-              VALUES 
-                (${id}, '${name}', '${chatId.toString()}')
-            """
+          s"""INSERT INTO
+          polls
+          (pollId, name, chatId)
+          VALUES
+          (${id}, '${name}', '${chatId.toString()}')
+          """
         )
       } catch {
         case e: Throwable => println("ERROR: " + e)
@@ -60,16 +60,16 @@ class DBClient {
       )
       try {
         stm.executeQuery(
-          s"""INSERT INTO 
-                poll_results 
-                (chatId, pollId, option_text, msgId, votes) 
-              VALUES 
-                ('${chatId.toString()}', 
-                  ${id},
-                  '${text}',
-                  ${msgId.getOrElse(-2)},
-                  ${votes})
-            """
+          s"""INSERT INTO
+          poll_results
+          (chatId, pollId, option_text, msgId, votes)
+          VALUES
+          ('${chatId.toString()}',
+            ${id},
+            '${text}',
+            ${msgId.getOrElse(-2)},
+            ${votes})
+          """
         )
       } catch {
         case e: Throwable => println("ERROR: " + e)
@@ -122,21 +122,21 @@ class DBClient {
           var r: ArrayBuffer[(String, String)] = ArrayBuffer[(String, String)]()
 
           val sql =
-            s"""SELECT 
-                polls.name name,
-                poll_results.option_text option_text,
-                poll_results.votes votes
-              FROM
-                poll_results 
-                  INNER JOIN 
-                polls 
-                  ON 
-                poll_results.pollId = polls.pollId 
-              WHERE 
-                poll_results.pollId=${id}
-                  AND 
-                poll_results.chatId='${chatId.toString()}'
-            """
+            s"""SELECT
+          polls.name name,
+          poll_results.option_text option_text,
+          poll_results.votes votes
+          FROM
+          poll_results
+          INNER JOIN
+          polls
+          ON
+          poll_results.pollId = polls.pollId
+          WHERE
+          poll_results.pollId=${id}
+          AND
+          poll_results.chatId='${chatId.toString()}'
+          """
           val rs = stm.executeQuery(sql)
 
           var name: Option[String] = None
@@ -162,14 +162,34 @@ class DBClient {
         stm.executeQuery(
           s"""
           UPDATE
-            polls
+          polls
           SET
-            finished=true
+          finished=true
           WHERE
-            pollId=${pollId}
-              AND
-            chatId='${chatId.toString()}'
-        """
+          pollId=${pollId}
+          AND
+          chatId='${chatId.toString()}'
+          """
+        )
+      } catch {
+        case e: Throwable => println("ERROR: " + e)
+      }
+    }
+  }
+
+  def flushDB(): Future[Unit] = {
+    Future {
+      val stm = conn.createStatement(
+        ResultSet.TYPE_FORWARD_ONLY,
+        ResultSet.CONCUR_READ_ONLY
+      )
+      try {
+        stm.executeQuery(
+          s"""
+          DELETE FROM polls;
+
+          DELETE FROM poll_results;
+          """
         )
       } catch {
         case e: Throwable => println("ERROR: " + e)

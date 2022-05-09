@@ -51,9 +51,9 @@ object Main extends App {
       answerPeriodTimeInSeconds,
       counter
     ),
-    today.getTime(),
-    TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS)
-  )
+  today.getTime(),
+  TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS)
+)
 
   // Schedule the polling
   // timer.schedule(

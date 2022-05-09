@@ -461,10 +461,13 @@ class VotingBot(token: String, db: DBClient) extends CoreBot(token) {
   }
 
   onCommand("help") { implicit msg =>
-    this.sendMessage(
-      "Here are the availible commands:\n - /help  Lists the most useful commands\n - /init  Initializes a chat\n - /addOption <Option: Text> Adds an option to the current poll\n - /polls  Lists all the polls (past and present) from this chat\n - /results  Lists the results of all polls from this chat\n - /options Lists all of the options in the current poll and their indexes\n - /removeOption <index: Int> Removes the specified option from the poll",
-      msg.chat.chatId
-    )
+    request(
+      SendMessage(
+        msg.chat.chatId,
+        "Here are the availible commands:\n - /help  Lists the most useful commands\n - /init  Initializes a chat\n - /addOption <Option: Text> Adds an option to the current poll\n - /polls  Lists all the polls (past and present) from this chat\n - /results  Lists the results of all polls from this chat\n - /options Lists all of the options in the current poll and their indexes\n - /removeOption <index: Int> Removes the specified option from the poll",
+        parseMode = Some(ParseMode.HTML)
+      )
+    ).map(_ => ())
   }
 
   def test(): String = "test"

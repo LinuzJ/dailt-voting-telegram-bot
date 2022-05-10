@@ -16,6 +16,19 @@
   - [Docker](https://www.docker.com/)
 
 
+
+## Usage
+
+With the bot up and running and adde to a chat you can communicate with it using the following commands:
+  - /initAdmin  &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;  -> &ensp; Initializes your user as admin for the bot in all chats
+  - /init       &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;-> &ensp; Initializes the chat. Bot starts collecting polling events from this chat
+  - /help   &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;-> &ensp;Lists all available commands in a list similar to this
+  - /addOption [arg]  &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;-> Adds an your argument as an option for the current poll
+  - /options &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;-> Lists all current options in the current poll
+  - /removeOption [index] -> Removes option number [index] from the current poll (index can be found from /options)
+  - /polls  &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;-> Lists all past and present polls in the current chat
+  - /results  &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp; -> Lists all past and present results from the current chat 
+
 ## Prerequisites
 
 You will need to have **Scala**, **sbt** and **Docker** installed to run the project.
@@ -49,3 +62,5 @@ sudo sh create.sh [YOUR_TELEGRAM_TOKEN] [-d]
 ```
 
 You can run both ```create.sh``` and ```run.sh``` either with the tag ```-d``` after them to detach the container logs or not.
+
+
